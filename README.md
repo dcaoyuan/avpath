@@ -13,7 +13,7 @@ AvPath is the likeness of xpath/jspath to select, update, insert, delete data on
 
 Comparing to jspath that is applied on Json data，AvPath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
 ```scala
-AvPath.select(".mapfield(\“thekey\")”, record, schema)
+AvPath.select(".mapfield(\"thekey\")", record, schema)
 ```
 
 
@@ -83,7 +83,7 @@ where:
 
 ```scala
 AvPath.select(
-    '.automobiles{.maker === "Honda" && .year > 2009}.model',
+    ".automobiles{.maker === \"Honda\" && .year > 2009}.model",
     {
         "automobiles" : [
             { "maker" : "Nissan", "model" : "Teana", "year" : 2011 },
@@ -97,7 +97,7 @@ AvPath.select(
 ```
 
 Result will be:
-```json
+```
 ['Jazz', 'Accord']
 ```
 
@@ -164,16 +164,16 @@ var doc = {
 #### Examples
 ```scala
 // find all books authors
-AvPath.select('.books.author', doc, schema)
+AvPath.select(".books.author", doc, schema)
 // [{ name : 'Robert C. Martin' }, { name : 'Nicholas C. Zakas' }, { name : 'Robert C. Martin' }, { name : 'Douglas Crockford' }]
 
 // find all books author names
-AvPath.select('.books.author.name', doc, schema)
+AvPath.select(".books.author.name", doc, schema)
 // ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
 
 // find all names in books*
-// AvPath.select('.books..name', doc, schema)
-['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
+AvPath.select(".books..name", doc, schema)
+// ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
 
 ```
 ### Predicates
@@ -397,11 +397,11 @@ Parentheses are used to explicitly denote precedence by grouping parts of an exp
 #### Examples
 ```scala
 // find all book titles whose author is Robert C. Martin
-AvPath.select('.books{.author.name === "Robert C. Martin"}.title', doc, schema)
+AvPath.select(".books{.author.name === \"Robert C. Martin\"}.title", doc, schema)
 // ['Clean Code', 'Agile Software Development']
 
 // find all book titles with price less than 17
-AvPath.select('.books{.price < 17}.title', doc, schema)
+AvPath.select(".books{.price < 17}.title", doc, schema)
 // ['Maintainable JavaScript', 'JavaScript: The Good Parts']
 ```
 
@@ -428,27 +428,27 @@ Also you can use negative position numbers:
 #### Examples
 ```Scala
 // find first book title
-AvPath.select('.books[0].title', doc, schema)
+AvPath.select(".books[0].title", doc, schema)
 // ['Clean Code']
 
 // find first title of books
-AvPath.select('.books.title[0]', doc, schema)
+AvPath.select(".books.title[0]", doc, schema)
 // 'Clean Code'
 
 // find last book title
-AvPath.select('.books[-1].title', doc, schema)
+AvPath.select(".books[-1].title", doc, schema)
 // ['JavaScript: The Good Parts']
 
 // find two first book titles
-AvPath.select('.books[:2].title', doc, schema)
+AvPath.select(".books[:2].title", doc, schema)
 // ['Clean Code', 'Maintainable JavaScript']
 
 // find two last book titles
-AvPath.select('.books[-2:].title', doc, schema)
+AvPath.select(".books[-2:].title", doc, schema)
 // ['Agile Software Development', 'JavaScript: The Good Parts']
 
 // find two book titles from second position
-AvPath.select('.books[1:3].title', doc, schema)
+AvPath.select(".books[1:3].title", doc, schema)
 // ['Maintainable JavaScript', 'Agile Software Development']
 ```
 ### Multiple predicates
@@ -461,20 +461,20 @@ You can use more than one predicate. The result will contain only items that mat
 AvPath.select('.books{.price < 15}{.price > 5}[0].title', doc, schema)
 ['Maintainable JavaScript']
 ```
-### Substitutions
+### Substitutions (TODO)
 
 Substitutions allow you to use runtime-evaluated values in predicates.
 
 #### Examples
 ```
-var path = '.books{.author.name === $author}.title'
+var path = ".books{.author.name === $author}.title"
 
 // find book name whose author Nicholas C. Zakas
-AvPath.select(path, doc, schema, { author **:** 'Nicholas C. Zakas' })
+AvPath.select(path, doc, schema, { author : 'Nicholas C. Zakas' })
 // ['Maintainable JavaScript'] 
 
 // find books name whose authors Robert C. Martin or Douglas Crockford
-AvPath.select(path, doc, schema, { author **:** ['Robert C. Martin', 'Douglas Crockford'] })
+AvPath.select(path, doc, schema, { author : ['Robert C. Martin', 'Douglas Crockford'] })
 // ['Clean Code', 'Agile Software Development', 'JavaScript: The Good Parts']
 
 ```
