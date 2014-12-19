@@ -456,25 +456,25 @@ AvPath.select(".books[1:3].title", doc, schema)
 You can use more than one predicate. The result will contain only items that match all the predicates.
 
 #### **Examples**
-```
+```scala
 // find first book name whose price less than 15 and greater than 5
-AvPath.select('.books{.price < 15}{.price > 5}[0].title', doc, schema)
-['Maintainable JavaScript']
+AvPath.select(".books{.price < 15}{.price > 5}[0].title", doc, schema)
+// ['Maintainable JavaScript']
 ```
 ### Substitutions (TODO)
 
 Substitutions allow you to use runtime-evaluated values in predicates.
 
 #### Examples
-```
+```scala
 var path = ".books{.author.name === $author}.title"
 
 // find book name whose author Nicholas C. Zakas
-AvPath.select(path, doc, schema, { author : 'Nicholas C. Zakas' })
+AvPath.select(path, doc, schema, """{ author : 'Nicholas C. Zakas' }""")
 // ['Maintainable JavaScript'] 
 
 // find books name whose authors Robert C. Martin or Douglas Crockford
-AvPath.select(path, doc, schema, { author : ['Robert C. Martin', 'Douglas Crockford'] })
+AvPath.select(path, doc, schema, { author : """['Robert C. Martin', 'Douglas Crockford']""" })
 // ['Clean Code', 'Agile Software Development', 'JavaScript: The Good Parts']
 
 ```
