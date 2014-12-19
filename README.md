@@ -13,7 +13,7 @@ AvPath is the likeness of xpath/jspath to select, update, insert, delete data on
 
 Comparing to jspath that is applied on Json data，AvPath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
 ```scala
-AvPath.select(".mapfield(\“thekey\")”, record, schema)
+AvPath.select(".mapfield(\"thekey\")", record, schema)
 ```
 
 
