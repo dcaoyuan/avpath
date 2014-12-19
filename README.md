@@ -3,7 +3,6 @@ wandou-avpath
 
 XPath likeness for Avro
 
-
 # AvPath 使用手册
 
 
@@ -484,3 +483,4 @@ AvPath.select(path, doc, schema, { author **:** ['Robert C. Martin', 'Douglas Cr
 ### Result
 
 Result of applying AvPath is always a List (empty, if found nothing), excluding case when the last predicate in top-level expression is a positional predicate with the exact index (e.g. [0], [5], [-1]). In this case, result is an Option item at the specified index (None if item hasn't found).
+=======
