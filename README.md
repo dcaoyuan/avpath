@@ -3,56 +3,55 @@ wandou-avpath
 
 XPath likeness for Avro
 
-# AvPath 使用手册
+
+## AvPath User Manual
 
 
-[[TOC]]
+## Preface 
 
-## 前言
+AvPath is likeness of xpath/jspath，select, update, insert, delete Avro data. Which could be used by Java/Scala via API lib，or used as data service for Avro records. The expression is similar to [jspath](https://github.com/dfilatov/jspath), but added supporting for Update、Delete、Clear 、Insert、InsertAll. This manual is based on the User Manual of jspath.
 
-AvPath 是语法类似 xpath 和 jspath，对 Avro 数据进行查询、更新、增加、删除的语言。可以以API 库的形式提供给 Java / Scala 调用，并且可以作为以 Avro 为存贮形式的数据服务使用。其语法基本上与 [jspath](https://github.com/dfilatov/jspath) 保持一致（但增加了 Update、Delete、Clear 、Insert、InsertAll 操作）。本文档是在 jspath 文档基础上修改而成。
-
-与 jspath 查询 json 数据相比，AvPath 查询的 Avro 数据多了Map类型，因此新增了：
-
+Comparing to jspath, which is applied on Json data，AvPath is applied on Avro data, which has Map data type, thus leading to extra experssion like:
+```
 AvPath.select(".mapfield(\“thekey\")”, record, schema)
-
-这种以 key 来查询 map 值的语法。
+```
+to query map by key
 
 ## Usage
 
-Select::
-
+### Select:
+```scala
 import com.wandoujia.avro.avpath.Evaluator
-
 import com.wandoujia.avro.avpath.Parser
 
-    
-
 val schema = new Schema.parse("account.avsc")
-
 val account = new GenericData.Record(schema)
-
 ...
 
 var x = AvPath.select(".chargeRecords[0].time", record, schema)
+```
 
-Update:
-
+### Update:
+```scala
 AvPath.update(".chargeRecords[0].time", record, schema, 100000)
+```
 
-Delete(只对Array和Map的元素):
-
+### Delete (Only applicable on elements of Array/Map):
+```scala
 AvPath.delete(".chargeRecords[*]{.time < 1000}", record, schema)
+```
 
-Clear(只对Array和Map):
-
+### Clear (Only applicable on Array/Map):
+```scala
 AvPath.clear(".chargeRecords", record, schema)
 
-Insert和InsertAll(只对Array和Map):
-
+```
+### Insert/InsertAll (Only applicable on Array/Map):
+```scala
 AvPath.insert(".chargeRecords", record, schema, chargeRecord)
 
 AvPath.insertAll(".chargeRecords", record, schema, Array(chargeRecord1, chargeRecord2))
+```
 
 where:
 
@@ -82,24 +81,25 @@ where:
 
 ### Quick example
 
+```scala
 AvPath.select(
     '.automobiles{.maker === "Honda" && .year > 2009}.model',
     {
-        "automobiles" **:** [
-            { "maker" **:** "Nissan", "model" **:** "Teana", "year" **:** 2011 },
-            { "maker" **:** "Honda", "model" **:** "Jazz", "year" **:** 2010 },
-            { "maker" **:** "Honda", "model" **:** "Civic", "year" **:** 2007 },
-            { "maker" **:** "Toyota", "model" **:** "Yaris", "year" **:** 2008 },
-            { "maker" **:** "Honda", "model" **:** "Accord", "year" **:** 2011 }
+        "automobiles" : [
+            { "maker" : "Nissan", "model" : "Teana", "year" : 2011 },
+            { "maker" : "Honda", "model" : "Jazz", "year" : 2010 },
+            { "maker" : "Honda", "model" : "Civic", "year" : 2007 },
+            { "maker" : "Toyota", "model" : "Yaris", "year" : 2008 },
+            { "maker" :* "Honda", "model" : "Accord", "year" : 2011 }
         ],
-        "motorcycles" **:** [{ "maker" **:** "Honda", "model" **:** "ST1300", "year" **:** 2012 }]
+        "motorcycles" : [{ "maker" : "Honda", "model" : "ST1300", "year" : 2012 }]
     })
-
+```
 
 Result will be:
-
+```json
 ['Jazz', 'Accord']
-
+```
 
 ## Documentation
 
@@ -109,73 +109,73 @@ AvPath expression consists of two type of top-level expressions: location path (
 
 To select items in AvPath, you use a location path. A location path consists of one or more location steps. Every location step starts with dot (.) or two dots (..) depending on the item you're trying to select:
 
-* .property — locates property immediately descended from context items
+* `.property` — locates property immediately descended from context items
 
-* ..property — locates property deeply descended from context items
+* `..property` — locates property deeply descended from context items
 
-* . — locates context items itself
+* `.` — locates context items itself
 
 You can use the wildcard symbol (*) instead of exact name of property:
 
-* .* — locates all properties immediately descended from the context items
+* `.*` — locates all properties immediately descended from the context items
 
-* ..* — locates all properties deeply descended from the context items
+* `..*` — locates all properties deeply descended from the context items
 
 Also AvPath allows to join several properties:
 
-* (.property1 | .property2 | .propertyN) — locates property1, property2, propertyN immediately descended from context items
+* `(.property1 | .property2 | .propertyN)` — locates property1, property2, propertyN immediately descended from context items
 
-* or even (.property1 | .property2.property2_1.property2_1_1) — locates .property1, .property2.property2_1.property2_1_1 items
+* or even `(.property1 | .property2.property2_1.property2_1_1)` — locates .property1, .property2.property2_1.property2_1_1 items
 
 Your location path can be absolute or relative. If location path starts with the root (^) you are using an absolute location path — your location path begins from the root items.
 
 Consider the following Avro data (**expressed in JSON for convenience**):
-
-**var** doc **=** {
-    "books" **:** [
+```json
+var doc = {
+    "books" : [
         {
-            "id"     **:** 1,
-            "title"  **:** "Clean Code",
-            "author" **:** { "name" **:** "Robert C. Martin" },
-            "price"  **:** 17.96
+            "id"     : 1,
+            "title"  : "Clean Code",
+            "author" : { "name" : "Robert C. Martin" },
+            "price"  : 17.96
         },
         {
-            "id"     **:** 2,
-            "title"  **:** "Maintainable JavaScript",
-            "author" **:** { "name" **:** "Nicholas C. Zakas" },
-            "price"  **:** 10
+            "id"     : 2,
+            "title"  : "Maintainable JavaScript",
+            "author" : { "name" : "Nicholas C. Zakas" },
+            "price"  : 10
         },
         {
-            "id"     **:** 3,
-            "title"  **:** "Agile Software Development",
-            "author" **:** { "name" **:** "Robert C. Martin" },
-            "price"  **:** 20
+            "id"     : 3,
+            "title"  : "Agile Software Development",
+            "author" : { "name" : "Robert C. Martin" },
+            "price"  : 20
         },
         {
-            "id"     **:** 4,
-            "title"  **:** "JavaScript: The Good Parts",
-            "author" **:** { "name" **:** "Douglas Crockford" },
-            "price"  **:** 15.67
+            "id"     : 4,
+            "title"  : "JavaScript: The Good Parts",
+            "author" : { "name" : "Douglas Crockford" },
+            "price"  : 15.67
         }
     ]
 };
 
-
-#### **Examples**
-
-*// find all books authors*
+```
+#### Examples
+```scala
+// find all books authors
 AvPath.select('.books.author', doc, schema)
-*/* [{ name : 'Robert C. Martin' }, { name : 'Nicholas C. Zakas' }, { name : 'Robert C. Martin' }, { name : 'Douglas Crockford' }] */*
+// [{ name : 'Robert C. Martin' }, { name : 'Nicholas C. Zakas' }, { name : 'Robert C. Martin' }, { name : 'Douglas Crockford' }]
 
-*// find all books author names*
+// find all books author names
 AvPath.select('.books.author.name', doc, schema)
-*/* ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] */*
+// ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
 
-*// find all names in books*
-AvPath.select('.books..name', doc, schema)
-*/* ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] */*
+// find all names in books*
+// AvPath.select('.books..name', doc, schema)
+['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
 
-
+```
 ### Predicates
 
 AvPath predicates allow you to write very specific rules about items you'd like to select when constructing your expressions. Predicates are filters that restrict the items selected by location path. There're two possible types of predicates: object and positional.
@@ -394,16 +394,16 @@ Logical operators convert their operands to boolean values using next rules:
 
 Parentheses are used to explicitly denote precedence by grouping parts of an expression that should be evaluated first.
 
-#### **Examples**
-
-*// find all book titles whose author is Robert C. Martin*
+#### Examples
+```scala
+// find all book titles whose author is Robert C. Martin
 AvPath.select('.books{.author.name === "Robert C. Martin"}.title', doc, schema)
-*/* ['Clean Code', 'Agile Software Development'] */*
+// ['Clean Code', 'Agile Software Development']
 
-*// find all book titles with price less than 17*
+// find all book titles with price less than 17
 AvPath.select('.books{.price < 17}.title', doc, schema)
-*/* ['Maintainable JavaScript', 'JavaScript: The Good Parts'] */*
-
+// ['Maintainable JavaScript', 'JavaScript: The Good Parts']
+```
 
 ### Positional predicates
 
@@ -411,76 +411,73 @@ Positional predicates allow you to filter items by their context position. Posit
 
 There are four available forms:
 
-* [ index] — returns index-positioned item in context (first item is at index 0), e.g. [3] returns fourth item in context
+* `[ index]` — returns index-positioned item in context (first item is at index 0), e.g. [3] returns fourth item in context
 
-* [index:] — returns items whose index in context is greater or equal to index, e.g. [2:] returns items whose index in context is greater or equal to 2
+* `[index:]` — returns items whose index in context is greater or equal to index, e.g. [2:] returns items whose index in context is greater or equal to 2
 
-* [:index] — returns items whose index in context is smaller than index, e.g. [:5] returns first five items in context
+* `[:index]` — returns items whose index in context is smaller than index, e.g. [:5] returns first five items in context
 
-* [indexFrom:indexTo] — returns items whose index in context is greater or equal to indexFrom and smaller than indexTo, e.g. [2:5] returns three items with indices 2, 3 and 4
+* `[indexFrom:indexTo]` — returns items whose index in context is greater or equal to indexFrom and smaller than indexTo, e.g. [2:5] returns three items with indices 2, 3 and 4
 
 Also you can use negative position numbers:
 
-* [-1] — returns last item in context
+* `[-1]` — returns last item in context
 
-* [-3:] — returns last three items in context
+* `[-3:]` — returns last three items in context
 
-#### **Examples**
-
-*// find first book title*
+#### Examples
+```Scala
+// find first book title
 AvPath.select('.books[0].title', doc, schema)
-*/* ['Clean Code'] */*
+// ['Clean Code']
 
-*// find first title of books*
+// find first title of books
 AvPath.select('.books.title[0]', doc, schema)
-*/* 'Clean Code' */*
+// 'Clean Code'
 
-*// find last book title*
-AvPath.select('.books[-1].title', doc, schema);
-*/* ['JavaScript: The Good Parts'] */*
+// find last book title
+AvPath.select('.books[-1].title', doc, schema)
+// ['JavaScript: The Good Parts']
 
-*// find two first book titles*
-AvPath.select('.books[:2].title', doc, schema);
-*/* ['Clean Code', 'Maintainable JavaScript'] */*
+// find two first book titles
+AvPath.select('.books[:2].title', doc, schema)
+// ['Clean Code', 'Maintainable JavaScript']
 
-*// find two last book titles*
-AvPath.select('.books[-2:].title', doc, schema);
-*/* ['Agile Software Development', 'JavaScript: The Good Parts'] */*
+// find two last book titles
+AvPath.select('.books[-2:].title', doc, schema)
+// ['Agile Software Development', 'JavaScript: The Good Parts']
 
-*// find two book titles from second position*
-AvPath.select('.books[1:3].title', doc, schema);
-*/* ['Maintainable JavaScript', 'Agile Software Development'] */*
-
-
+// find two book titles from second position
+AvPath.select('.books[1:3].title', doc, schema)
+// ['Maintainable JavaScript', 'Agile Software Development']
+```
 ### Multiple predicates
 
 You can use more than one predicate. The result will contain only items that match all the predicates.
 
 #### **Examples**
-
-*// find first book name whose price less than 15 and greater than 5*
+```
+// find first book name whose price less than 15 and greater than 5
 AvPath.select('.books{.price < 15}{.price > 5}[0].title', doc, schema)
-*/* ['Maintainable JavaScript'] */*
-
-
+['Maintainable JavaScript']
+```
 ### Substitutions
 
 Substitutions allow you to use runtime-evaluated values in predicates.
 
-#### **Examples**
+#### Examples
+```
+var path = '.books{.author.name === $author}.title'
 
-**var** path **=** '.books{.author.name === $author}.title'
-
-*// find book name whose author Nicholas C. Zakas*
+// find book name whose author Nicholas C. Zakas
 AvPath.select(path, doc, schema, { author **:** 'Nicholas C. Zakas' })
-*/* ['Maintainable JavaScript'] */*
+// ['Maintainable JavaScript'] 
 
-*// find books name whose authors Robert C. Martin or Douglas Crockford*
+// find books name whose authors Robert C. Martin or Douglas Crockford
 AvPath.select(path, doc, schema, { author **:** ['Robert C. Martin', 'Douglas Crockford'] })
-*/* ['Clean Code', 'Agile Software Development', 'JavaScript: The Good Parts'] */*
+// ['Clean Code', 'Agile Software Development', 'JavaScript: The Good Parts']
 
-
+```
 ### Result
 
 Result of applying AvPath is always a List (empty, if found nothing), excluding case when the last predicate in top-level expression is a positional predicate with the exact index (e.g. [0], [5], [-1]). In this case, result is an Option item at the specified index (None if item hasn't found).
-=======
