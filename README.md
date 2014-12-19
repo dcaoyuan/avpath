@@ -11,9 +11,9 @@ XPath likeness for Avro
 
 AvPath is the likeness of xpath/jspath to select, update, insert, delete data on Avro form. Which could be used by Java/Scala as API library，or used as data service for Avro records. The expression is similar to [jspath](https://github.com/dfilatov/jspath), but we also added APIs to support for **Update**, **Delete**, **Clear**, **Insert** and **InsertAll**. This manual is based on the User Manual of jspath.
 
-Comparing to jspath that is applied on Json data，AvPath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
+Comparing to jspath that is applied on Json data, AvPath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
 ```scala
-AvPath.select(record, ".mapfield(\"thekey\")")
+avpath.select(record, ".mapfield(\"thekey\")")
 ```
 
 
@@ -28,29 +28,29 @@ val schema = new Schema.parse("account.avsc")
 val account = new GenericData.Record(schema)
 ...
 
-var x = AvPath.select(record, ".chargeRecords[0].time")
+var x = avpath.select(record, ".chargeRecords[0].time")
 ```
 
 ### Update:
 ```scala
-AvPath.update(record, ".chargeRecords[0].time", 100000)
+avpath.update(record, ".chargeRecords[0].time", 100000)
 ```
 
 ### Delete (Only applicable on elements of Array/Map):
 ```scala
-AvPath.delete(record, ".chargeRecords[*]{.time < 1000}")
+avpath.delete(record, ".chargeRecords[*]{.time < 1000}")
 ```
 
 ### Clear (Only applicable on Array/Map):
 ```scala
-AvPath.clear(record, ".chargeRecords")
+avpath.clear(record, ".chargeRecords")
 
 ```
 ### Insert/InsertAll (Only applicable on Array/Map):
 ```scala
-AvPath.insert(record, ".chargeRecords", chargeRecord)
+avpath.insert(record, ".chargeRecords", chargeRecord)
 
-AvPath.insertAll(record, ".chargeRecords", Array(chargeRecord1, chargeRecord2))
+avpath.insertAll(record, ".chargeRecords", List(chargeRecord1, chargeRecord2))
 ```
 
 where:
@@ -83,7 +83,7 @@ where:
 the first param is pseudo avro record in json format.
 
 ```scala
-AvPath.select(
+avpath.select(
     {
         "automobiles" : [
             { "maker" : "Nissan", "model" : "Teana", "year" : 2011 },
@@ -169,15 +169,15 @@ var doc =
 #### Examples
 ```scala
 // find all books authors
-AvPath.select(doc, ".books.author")
+avpath.select(doc, ".books.author")
 // [{ name : 'Robert C. Martin' }, { name : 'Nicholas C. Zakas' }, { name : 'Robert C. Martin' }, { name : 'Douglas Crockford' }]
 
 // find all books author names
-AvPath.select(doc, ".books.author.name")
+avpath.select(doc, ".books.author.name")
 // ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
 
 // find all names in books*
-AvPath.select(doc, ".books..name")
+avpath.select(doc, ".books..name")
 // ['Robert C. Martin', 'Nicholas C. Zakas', 'Robert C. Martin', 'Douglas Crockford' ] 
 
 ```
@@ -402,11 +402,11 @@ Parentheses are used to explicitly denote precedence by grouping parts of an exp
 #### Examples
 ```scala
 // find all book titles whose author is Robert C. Martin
-AvPath.select(".books{.author.name === \"Robert C. Martin\"}.title", doc, schema)
+avpath.select(".books{.author.name === \"Robert C. Martin\"}.title", doc, schema)
 // ['Clean Code', 'Agile Software Development']
 
 // find all book titles with price less than 17
-AvPath.select(".books{.price < 17}.title", doc, schema)
+avpath.select(".books{.price < 17}.title", doc, schema)
 // ['Maintainable JavaScript', 'JavaScript: The Good Parts']
 ```
 
@@ -433,27 +433,27 @@ Also you can use negative position numbers:
 #### Examples
 ```Scala
 // find first book title
-AvPath.select(doc, ".books[0].title")
+avpath.select(doc, ".books[0].title")
 // ['Clean Code']
 
 // find first title of books
-AvPath.select(doc, ".books.title[0]")
+avpath.select(doc, ".books.title[0]")
 // 'Clean Code'
 
 // find last book title
-AvPath.select(doc, ".books[-1].title")
+avpath.select(doc, ".books[-1].title")
 // ['JavaScript: The Good Parts']
 
 // find two first book titles
-AvPath.select(doc, ".books[:2].title")
+avpath.select(doc, ".books[:2].title")
 // ['Clean Code', 'Maintainable JavaScript']
 
 // find two last book titles
-AvPath.select(doc, ".books[-2:].title")
+avpath.select(doc, ".books[-2:].title")
 // ['Agile Software Development', 'JavaScript: The Good Parts']
 
 // find two book titles from second position
-AvPath.select(doc, ".books[1:3].title")
+avpath.select(doc, ".books[1:3].title")
 // ['Maintainable JavaScript', 'Agile Software Development']
 ```
 ### Multiple predicates
@@ -463,7 +463,7 @@ You can use more than one predicate. The result will contain only items that mat
 #### **Examples**
 ```scala
 // find first book name whose price less than 15 and greater than 5
-AvPath.select(doc, ".books{.price < 15}{.price > 5}[0].title")
+avpath.select(doc, ".books{.price < 15}{.price > 5}[0].title")
 // ['Maintainable JavaScript']
 ```
 ### Substitutions (TODO)
@@ -475,11 +475,11 @@ Substitutions allow you to use runtime-evaluated values in predicates.
 var path = ".books{.author.name === $author}.title"
 
 // find book name whose author Nicholas C. Zakas
-AvPath.select(doc, path, """{ author : 'Nicholas C. Zakas' }""")
+avpath.select(doc, path, """{ author : 'Nicholas C. Zakas' }""")
 // ['Maintainable JavaScript'] 
 
 // find books name whose authors Robert C. Martin or Douglas Crockford
-AvPath.select(doc, path, { author : """['Robert C. Martin', 'Douglas Crockford']""" })
+avpath.select(doc, path, { author : """['Robert C. Martin', 'Douglas Crockford']""" })
 // ['Clean Code', 'Agile Software Development', 'JavaScript: The Good Parts']
 
 ```
