@@ -9,13 +9,13 @@ XPath likeness for Avro
 
 ## Preface 
 
-AvPath is likeness of xpath/jspath，select, update, insert, delete Avro data. Which could be used by Java/Scala via API lib，or used as data service for Avro records. The expression is similar to [jspath](https://github.com/dfilatov/jspath), but added supporting for Update、Delete、Clear 、Insert、InsertAll. This manual is based on the User Manual of jspath.
+AvPath is the likeness of xpath/jspath to select, update, insert, delete data on Avro form. Which could be used by Java/Scala as API library，or used as data service for Avro records. The expression is similar to [jspath](https://github.com/dfilatov/jspath), but we also added APIs to support for **Update**, **Delete**, **Clear**, **Insert** and **InsertAll**. This manual is based on the User Manual of jspath.
 
-Comparing to jspath, which is applied on Json data，AvPath is applied on Avro data, which has Map data type, thus leading to extra experssion like:
-```
+Comparing to jspath that is applied on Json data，AvPath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
+```scala
 AvPath.select(".mapfield(\“thekey\")”, record, schema)
 ```
-to query map by key
+
 
 ## Usage
 
