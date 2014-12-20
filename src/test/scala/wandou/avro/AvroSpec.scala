@@ -26,18 +26,18 @@ class AvroSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
     chargeRecords.add(chargeRecord1)
     chargeRecords.add(chargeRecord2)
 
-    val avroEncoded = Avro.avroEncode(chargeRecords, chargeRecordsSchema).get
+    val avroEncoded = avroEncode(chargeRecords, chargeRecordsSchema).get
     // decode to Generic records
-    val avroDecoded = Avro.avroDecode[GenericData.Array[GenericData.Record]](avroEncoded, chargeRecordsSchema).get
+    val avroDecoded = avroDecode[GenericData.Array[GenericData.Record]](avroEncoded, chargeRecordsSchema).get
     // decode to GhargeRecords
-    val avroDecodedSpecified = Avro.avroDecode[GenericData.Array[ChargeRecord]](avroEncoded, chargeRecordsSchema, true).get
+    val avroDecodedSpecified = avroDecode[GenericData.Array[ChargeRecord]](avroEncoded, chargeRecordsSchema, true).get
 
     // encode ChargeRecords
-    val avroEncodedSpecified1 = Avro.avroEncode(avroDecodedSpecified, chargeRecordsSchema).get
+    val avroEncodedSpecified1 = avroEncode(avroDecodedSpecified, chargeRecordsSchema).get
     // decode to ChargeRecords
-    val avroDecodedSpecified1 = Avro.avroDecode[GenericData.Array[ChargeRecord]](avroEncodedSpecified1, chargeRecordsSchema, true).get
+    val avroDecodedSpecified1 = avroDecode[GenericData.Array[ChargeRecord]](avroEncodedSpecified1, chargeRecordsSchema, true).get
     // decode to Generic records
-    val avroDecodedGeneric1 = Avro.avroDecode[GenericData.Array[GenericData.Record]](avroEncodedSpecified1, chargeRecordsSchema, false).get
+    val avroDecodedGeneric1 = avroDecode[GenericData.Array[GenericData.Record]](avroEncodedSpecified1, chargeRecordsSchema, false).get
 
     val jsonEncoded = ToJson.toJsonString(chargeRecords, chargeRecordsSchema)
     val jsonDecoded = FromJson.fromJsonString(jsonEncoded, chargeRecordsSchema)

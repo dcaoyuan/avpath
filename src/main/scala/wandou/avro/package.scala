@@ -1,4 +1,4 @@
-package wandou.avro
+package wandou
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -16,10 +16,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.collection.JavaConverters._
 
-/**
- *
- */
-object Avro {
+package object avro {
 
   def avroEncode[T](value: T, schema: Schema): Try[Array[Byte]] = encode[T](value, schema)
 
