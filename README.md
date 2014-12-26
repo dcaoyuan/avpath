@@ -402,11 +402,11 @@ Parentheses are used to explicitly denote precedence by grouping parts of an exp
 #### Examples
 ```scala
 // find all book titles whose author is Robert C. Martin
-avpath.select(".books{.author.name === \"Robert C. Martin\"}.title", doc, schema)
+avpath.select(doc, ".books{.author.name === \"Robert C. Martin\"}.title", schema)
 // ['Clean Code', 'Agile Software Development']
 
 // find all book titles with price less than 17
-avpath.select(".books{.price < 17}.title", doc, schema)
+avpath.select(doc, ".books{.price < 17}.title", schema)
 // ['Maintainable JavaScript', 'JavaScript: The Good Parts']
 ```
 
