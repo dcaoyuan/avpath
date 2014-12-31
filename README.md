@@ -1,4 +1,4 @@
-wandou-avpath
+avpath
 =============
 
 XPath likeness for Avro
