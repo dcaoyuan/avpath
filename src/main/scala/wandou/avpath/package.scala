@@ -1,5 +1,6 @@
 package wandou
 
+import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.IndexedRecord
 
 package object avpath {
@@ -17,6 +18,13 @@ package object avpath {
   final case class InsertAllJson(id: String, path: String, values: String) extends Command
   final case class Delete(id: String, path: String) extends Command
   final case class Clear(id: String, path: String) extends Command
+
+  final case class GetRecord(id: String) extends Command
+  final case class PutRecord(id: String, record: Record) extends Command
+  final case class PutRecordJson(id: String, record: String) extends Command
+  final case class GetField(id: String, field: String) extends Command
+  final case class PutField(id: String, field: String, value: Any) extends Command
+  final case class PutFieldJson(id: String, field: String, value: String) extends Command
 
   def select(data: IndexedRecord, path: String): List[Any] = {
     val p = new Parser()
