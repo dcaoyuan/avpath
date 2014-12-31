@@ -56,7 +56,7 @@ object Build extends sbt.Build {
     pomIncludeRepository := { (repo: MavenRepository) => false },
     pomExtra := pomXml)
 
-  lazy val pomXml = (<url>https://github.com/wandoulabs/wandou-math</url>
+  lazy val pomXml = (<url>https://github.com/wandoulabs/avpath</url>
       <licenses>
         <license>
           <name>Apache License 2.0</name>
@@ -65,8 +65,8 @@ object Build extends sbt.Build {
         </license>
       </licenses>
       <scm>
-        <url>git@github.com:wandoulabs/wandou-avpath.git</url>
-        <connection>scm:git:git@github.com:wandoulabs/wandou-avpath.git</connection>
+        <url>git@github.com:wandoulabs/avpath.git</url>
+        <connection>scm:git:git@github.com:wandoulabs/avpath.git</connection>
       </scm>
       <developers>
         <developer>
