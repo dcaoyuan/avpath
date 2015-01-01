@@ -67,14 +67,7 @@ object Build extends sbt.Build {
       <scm>
         <url>git@github.com:wandoulabs/avpath.git</url>
         <connection>scm:git:git@github.com:wandoulabs/avpath.git</connection>
-      </scm>
-      <developers>
-        <developer>
-          <id>dcaoyuan</id>
-          <name>Caoyuan DENG</name>
-          <email>dcaoyuan@gmail.com</email>
-        </developer>
-      </developers>)
+      </scm>)
 
   lazy val noPublishing = Seq(
     publish :=(),
