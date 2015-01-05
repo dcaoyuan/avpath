@@ -113,7 +113,7 @@ object Evaluator {
       case Clear =>
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
-            rec.get(field.name) match {
+            rec.get(field.pos) match {
               case arr: GenericData.Array[_] => arr.clear
               case map: java.util.Map[_, _]  => map.clear
               case _                         => // ?
@@ -137,7 +137,7 @@ object Evaluator {
 
           case TargetRecord(rec, field) =>
             val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], field.schema, false) else value
-            rec.put(field.name, value1)
+            rec.put(field.pos, value1)
 
           case TargetArray(arr, idx, arrSchema) =>
             getElementType(arrSchema) match {
@@ -175,7 +175,7 @@ object Evaluator {
       case Insert =>
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
-            rec.get(field.name) match {
+            rec.get(field.pos) match {
               case arr: GenericData.Array[_] =>
                 getElementType(field.schema) match {
                   case Some(elemSchema) =>
@@ -226,7 +226,7 @@ object Evaluator {
       case InsertAll =>
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
-            rec.get(field.name) match {
+            rec.get(field.pos) match {
               case arr: GenericData.Array[_] =>
                 getElementType(field.schema) match {
                   case Some(elemSchema) =>
@@ -329,10 +329,10 @@ object Evaluator {
     import scala.collection.JavaConverters._
     if (dst.getSchema == src.getSchema) {
       dst.getSchema.getFields.asScala.foreach { f =>
-        val v = src.get(f.name)
+        val v = src.get(f.pos)
         val t = f.schema.getType
         if (v != null && (t != Type.ARRAY || !v.asInstanceOf[java.util.Collection[_]].isEmpty) && (t != Type.MAP || !v.asInstanceOf[java.util.Map[_, _]].isEmpty)) {
-          dst.put(f.name, v)
+          dst.put(f.pos, v)
         }
       }
     }
@@ -420,7 +420,7 @@ object Evaluator {
         ctx foreach {
           case Ctx(rec: GenericData.Record, schema, topLevelField, _) =>
             getField(schema, fieldName) match {
-              case Some(field) => res ::= Ctx(rec.get(fieldName), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
+              case Some(field) => res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
               case _           =>
             }
 
