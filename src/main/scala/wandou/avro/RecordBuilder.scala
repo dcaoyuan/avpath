@@ -24,7 +24,7 @@ object RecordBuilder {
   }
 
   /**
-   * Creates a RecordBuilder by copying an existing GenericRecordBuilder.
+   * Creates a RecordBuilder by copying an existing RecordBuilder.
    * @param other the GenericRecordBuilder to copy.
    */
   def apply(other: RecordBuilder) = {
@@ -146,7 +146,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
    * @param fieldName the name of the field to clear.
    * @return a reference to the RecordBuilder.
    */
-  def clear(fieldName: String): RecordBuilder = clear(schema().getField(fieldName))
+  def clear(fieldName: String): RecordBuilder = clear(schema.getField(fieldName))
 
   /**
    * Clears the value of the given field.
