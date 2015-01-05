@@ -114,10 +114,11 @@ object FromJson {
           if (!json.isObject) {
             throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
           }
-          json.getFieldNames.toSet
           var fields = json.getFieldNames.toSet
           val record = if (specified) newSpecificRecord(schema.getFullName) else newGenericRecord(schema)
-          for (field <- schema.getFields) {
+          val fieldsIter = schema.getFields.iterator
+          while (fieldsIter.hasNext) {
+            val field = fieldsIter.next
             val fieldName = field.name
             val fieldElement = json.get(fieldName)
             if (fieldElement != null) {
@@ -191,7 +192,9 @@ object FromJson {
 
     /** Map from Avro schema type to list of schemas of this type in the union. */
     val typeMap = new java.util.HashMap[Type, java.util.List[Schema]]()
-    for (tpe <- schema.getTypes) {
+    val typesIter = schema.getTypes.iterator
+    while (typesIter.hasNext) {
+      val tpe = typesIter.next
       var types = typeMap.get(tpe.getType)
       if (null == types) {
         types = new java.util.ArrayList[Schema]()
@@ -205,14 +208,18 @@ object FromJson {
       val typeName = entry.getKey
       val actualNode = entry.getValue
 
-      for (tpe <- schema.getTypes) {
+      val typesIter = schema.getTypes.iterator
+      while (typesIter.hasNext) {
+        val tpe = typesIter.next
         if (tpe.getFullName == typeName) {
           return fromJsonNode(actualNode, tpe, specified)
         }
       }
     }
 
-    for (tpe <- schema.getTypes) {
+    val typesIter1 = schema.getTypes.iterator
+    while (typesIter1.hasNext) {
+      val tpe = typesIter1.next
       try {
         return fromJsonNode(json, tpe, specified)
       } catch {
