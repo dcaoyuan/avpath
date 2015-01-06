@@ -5,6 +5,7 @@ import java.io.IOException
 import java.io.StringWriter
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
+import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericDatumWriter
 import org.apache.avro.generic.IndexedRecord
 import org.apache.avro.io.EncoderFactory
@@ -44,7 +45,13 @@ object ToJson {
         case Type.INT     => JSON_NODE_FACTORY.numberNode(value.asInstanceOf[Int])
         case Type.LONG    => JSON_NODE_FACTORY.numberNode(value.asInstanceOf[Long])
         case Type.STRING  => JSON_NODE_FACTORY.textNode(value.asInstanceOf[CharSequence].toString)
-        case Type.ENUM    => JSON_NODE_FACTORY.textNode(value.asInstanceOf[Enum[_]].toString) // Enums are represented as strings
+        case Type.ENUM =>
+          val strVal = value match {
+            case x: GenericData.EnumSymbol => x.toString
+            case x: Enum[_]                => x.toString
+            case x: String                 => x
+          }
+          JSON_NODE_FACTORY.textNode(strVal) // Enums are represented as strings
 
         case Type.BYTES | Type.FIXED =>
           // TODO Bytes are represented as strings (BASE64?)...

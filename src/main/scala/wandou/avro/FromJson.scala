@@ -19,9 +19,9 @@ import scala.collection.JavaConversions._
 /**
  * Decode a JSON string into an Avro value.
  *
- * TODO choose SpecificRecord or GenericRecord
  */
 object FromJson {
+  // TODO performance tunning: value cache etc.
 
   /**
    * Decodes a JSON node as an Avro value.
@@ -30,6 +30,7 @@ object FromJson {
    *
    * @param json JSON node to decode.
    * @param schema Avro schema of the value to decode.
+   * @param to specified or generic value, default generic
    * @return the decoded value.
    * @throws IOException on error.
    */
@@ -68,9 +69,7 @@ object FromJson {
 
       case Type.BOOLEAN =>
         if (!json.isBoolean) {
-          throw new IOException(String.format(
-            "Avro schema specifies '%s' but got JSON value: '%s'.",
-            schema, json))
+          throw new IOException(String.format("Avro schema specifies '%s' but got JSON value: '%s'.", schema, json))
         }
         json.getBooleanValue()
 
@@ -127,7 +126,9 @@ object FromJson {
             } else if (field.defaultValue != null) {
               record.put(field.pos, fromJsonNode(field.defaultValue, field.schema, specified))
             } else {
-              throw new IOException("Error parsing Avro record '%s' with missing field '%s'.".format(schema.getFullName, field.name))
+              //throw new IOException("Error parsing Avro record '%s' with missing field '%s'.".format(schema.getFullName, field.name))
+              val defaultValue = DefaultJsonNode.of(field)
+              record.put(field.pos, fromJsonNode(defaultValue, field.schema, specified))
             }
             fields -= fieldName
           }
@@ -160,7 +161,7 @@ object FromJson {
           throw new IOException("Avro schema specifies enum '%s' but got non-string JSON value: '%s'.".format(schema, json))
         }
         val enumValStr = json.getTextValue
-        enumValue(schema.getFullName, enumValStr)
+        if (specified) enumValue(schema.getFullName, enumValStr) else enumGenericValue(schema, enumValStr)
 
       case _ =>
         throw new RuntimeException("Unexpected schema type: " + schema)
@@ -278,6 +279,19 @@ object FromJson {
       case ex: IllegalAccessException => throw new IOException("Error while deserializing JSON: cannot access '%s'.".format(fullName))
       case ex: InstantiationException => throw new IOException("Error while deserializing JSON: cannot instantiate '%s'.".format(fullName))
     }
+  }
+
+  /**
+   * Looks up an Avro enum by name and string value.
+   *
+   * @param fullName Fully qualified enum name to look-up.
+   * @param value Enum value as a string.
+   * @return the Java enum value.
+   * @throws IOException on error.
+   */
+  @throws(classOf[IOException])
+  private def enumGenericValue(schema: Schema, value: String): Any = {
+    new GenericData.EnumSymbol(schema, value)
   }
 
   /**
