@@ -3,15 +3,17 @@ avpath
 
 XPath likeness for Avro
 
+<a href="https://travis-ci.org/wandoulabs/avpath"><img src="https://travis-ci.org/wandoulabs/avpath.png" alt="avpath build status"></a>
 
-## AvPath User Manual
+
+## avpath User Manual
 
 
 ## Preface 
 
-AvPath is the likeness of xpath/jspath to select, update, insert, delete data on Avro form. Which could be used by Java/Scala as API library，or used as data service for Avro records. The expression is similar to [jspath](https://github.com/dfilatov/jspath), but we also added APIs to support for **Update**, **Delete**, **Clear**, **Insert** and **InsertAll**. This manual is based on the User Manual of jspath.
+avpath is the likeness of xpath/jspath to select, update, insert, delete data on Avro form. Which could be used by Java/Scala as API library，or used as data service for Avro records. The expression is similar to [jspath](https://github.com/dfilatov/jspath), but we also added APIs to support for **Update**, **Delete**, **Clear**, **Insert** and **InsertAll**. This manual is based on the User Manual of jspath.
 
-Comparing to jspath that is applied on Json data, AvPath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
+Comparing to jspath that is applied on Json data, avpath is applied on Avro data that has Map data type, thus leading to an extra experssion to query map by key:
 ```scala
 avpath.select(record, ".mapfield(\"thekey\")")
 ```
@@ -105,11 +107,11 @@ Result will be:
 
 ## Documentation
 
-AvPath expression consists of two type of top-level expressions: location path (required) and predicates (optional).
+avpath expression consists of two type of top-level expressions: location path (required) and predicates (optional).
 
 ### Location path
 
-To select items in AvPath, you use a location path. A location path consists of one or more location steps. Every location step starts with dot (.) or two dots (..) depending on the item you're trying to select:
+To select items in avpath, you use a location path. A location path consists of one or more location steps. Every location step starts with dot (.) or two dots (..) depending on the item you're trying to select:
 
 * `.property` — locates property immediately descended from context items
 
@@ -123,7 +125,7 @@ You can use the wildcard symbol (*) instead of exact name of property:
 
 * `..*` — locates all properties deeply descended from the context items
 
-Also AvPath allows to join several properties:
+Also avpath allows to join several properties:
 
 * `(.property1 | .property2 | .propertyN)` — locates property1, property2, propertyN immediately descended from context items
 
@@ -183,7 +185,7 @@ avpath.select(doc, ".books..name")
 ```
 ### Predicates
 
-AvPath predicates allow you to write very specific rules about items you'd like to select when constructing your expressions. Predicates are filters that restrict the items selected by location path. There're two possible types of predicates: object and positional.
+avpath predicates allow you to write very specific rules about items you'd like to select when constructing your expressions. Predicates are filters that restrict the items selected by location path. There're two possible types of predicates: object and positional.
 
 ### Object predicates
 
@@ -199,7 +201,7 @@ Basic expressions in object predicates:
 
 * subpathes (e.g. .nestedProp.deeplyNestedProp)
 
-AvroPath allows to use in predicate expressions following types of operators:
+avpath allows to use in predicate expressions following types of operators:
 
 * comparison operators
 
