@@ -31,16 +31,14 @@ object Build extends sbt.Build {
   lazy val avroSettings = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
     sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Compile)(_ / "avsc"),
-    version in sbtavro.SbtAvro.avroConfig := "1.7.5"
-  )
+    version in sbtavro.SbtAvro.avroConfig := "1.7.5")
 
   // Todo rewrite sbt-avro to compile in Test phase.
   lazy val avroSettingsTest = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
     sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Test)(_ / "avsc"),
     javaSource in sbtavro.SbtAvro.avroConfig <<= (sourceManaged in Test)(_ / "java" / "compiled_avro"),
-    version in sbtavro.SbtAvro.avroConfig := "1.7.5"
-  )
+    version in sbtavro.SbtAvro.avroConfig := "1.7.5")
 
   lazy val releaseSettings = Seq(
     publishTo := {
@@ -74,8 +72,7 @@ object Build extends sbt.Build {
     publishLocal := (),
     // required until these tickets are closed https://github.com/sbt/sbt-pgp/issues/42,
     // https://github.com/sbt/sbt-pgp/issues/36
-    publishTo := None
-  )
+    publishTo := None)
 
 }
 
@@ -86,17 +83,14 @@ object Dependencies {
     "org.slf4j" % "slf4j-api" % SLF4J_VERSION,
     "org.slf4j" % "jcl-over-slf4j" % SLF4J_VERSION,
     "org.slf4j" % "log4j-over-slf4j" % SLF4J_VERSION,
-    "ch.qos.logback" % "logback-classic" % "1.1.2"
-  )
+    "ch.qos.logback" % "logback-classic" % "1.1.2")
 
   val test = Seq(
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2-RC1" % "test",
-    "org.scalatest" %% "scalatest" % "2.1.3" % "test"
-  )
+    "org.scalatest" %% "scalatest" % "2.1.3" % "test")
 
   val avro = Seq(
-    "org.apache.avro" % "avro" % "1.7.6"
-  )
+    "org.apache.avro" % "avro" % "1.7.6")
 
   val basic: Seq[ModuleID] = log ++ test ++ avro
 
@@ -122,13 +116,13 @@ object Formatting {
       format in BuildConfig := {
         val x = (format in BuildSbtConfig).value
         (format in BuildConfig).value
-      }
-    )
+      },
+      ScalariformKeys.preferences in BuildConfig := formattingPreferences,
+      ScalariformKeys.preferences in BuildSbtConfig := formattingPreferences)
 
   val settings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,
-    ScalariformKeys.preferences in Test := formattingPreferences
-  )
+    ScalariformKeys.preferences in Test := formattingPreferences)
 
   val formattingPreferences = {
     import scalariform.formatter.preferences._
