@@ -1,7 +1,5 @@
 import sbt._
 import sbt.Keys._
-import com.typesafe.sbt.SbtScalariform
-import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import sbtfilter.Plugin.FilterKeys._
 import scoverage.ScoverageSbtPlugin._
 
@@ -9,7 +7,8 @@ object Build extends sbt.Build {
 
   lazy val avpath = Project("wandou-avpath", file("."))
     .settings(basicSettings: _*)
-    .settings(formatSettings: _*)
+    .settings(Formatting.settings: _*)
+    .settings(Formatting.buildFileSettings: _*)
     .settings(releaseSettings: _*)
     .settings(sbtrelease.ReleasePlugin.releaseSettings: _*)
     .settings(libraryDependencies ++= Dependencies.avro ++ Dependencies.test)
@@ -27,7 +26,7 @@ object Build extends sbt.Build {
       "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
       "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       "Typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"),
-    javacOptions ++= Seq("-source", "1.6", "-target", "1.6")) 
+    javacOptions ++= Seq("-source", "1.6", "-target", "1.6"))
 
   lazy val avroSettings = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
@@ -56,40 +55,28 @@ object Build extends sbt.Build {
     pomIncludeRepository := { (repo: MavenRepository) => false },
     pomExtra := pomXml)
 
-  lazy val pomXml = (<url>https://github.com/wandoulabs/avpath</url>
-      <licenses>
-        <license>
-          <name>Apache License 2.0</name>
-          <url>http://www.apache.org/licenses/</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-      <scm>
-        <url>git@github.com:wandoulabs/avpath.git</url>
-        <connection>scm:git:git@github.com:wandoulabs/avpath.git</connection>
-      </scm>)
+  lazy val pomXml =
+    (<url>https://github.com/wandoulabs/avpath</url>
+     <licenses>
+       <license>
+         <name>Apache License 2.0</name>
+         <url>http://www.apache.org/licenses/</url>
+         <distribution>repo</distribution>
+       </license>
+     </licenses>
+     <scm>
+       <url>git@github.com:wandoulabs/avpath.git</url>
+       <connection>scm:git:git@github.com:wandoulabs/avpath.git</connection>
+     </scm>)
 
   lazy val noPublishing = Seq(
-    publish :=(),
-    publishLocal :=(),
+    publish := (),
+    publishLocal := (),
     // required until these tickets are closed https://github.com/sbt/sbt-pgp/issues/42,
     // https://github.com/sbt/sbt-pgp/issues/36
     publishTo := None
   )
 
-  lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
-    ScalariformKeys.preferences in Compile := formattingPreferences,
-    ScalariformKeys.preferences in Test := formattingPreferences)
-
-  lazy val formattingPreferences = {
-    import scalariform.formatter.preferences._
-    FormattingPreferences()
-      .setPreference(RewriteArrowSymbols, false)
-      .setPreference(AlignParameters, true)
-      .setPreference(AlignSingleLineCaseStatements, true)
-      .setPreference(DoubleIndentClassDeclaration, true)
-      .setPreference(IndentSpaces, 2)
-  }
 }
 
 object Dependencies {
@@ -114,5 +101,43 @@ object Dependencies {
   val basic: Seq[ModuleID] = log ++ test ++ avro
 
   val all = basic
+}
+
+object Formatting {
+  import com.typesafe.sbt.SbtScalariform
+  import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+  import ScalariformKeys._
+
+  val BuildConfig = config("build") extend Compile
+  val BuildSbtConfig = config("buildsbt") extend Compile
+
+  // invoke: build:scalariformFormat
+  val buildFileSettings: Seq[Setting[_]] = SbtScalariform.noConfigScalariformSettings ++
+    inConfig(BuildConfig)(SbtScalariform.configScalariformSettings) ++
+    inConfig(BuildSbtConfig)(SbtScalariform.configScalariformSettings) ++ Seq(
+      scalaSource in BuildConfig := baseDirectory.value / "project",
+      scalaSource in BuildSbtConfig := baseDirectory.value,
+      includeFilter in (BuildConfig, format) := ("*.scala": FileFilter),
+      includeFilter in (BuildSbtConfig, format) := ("*.sbt": FileFilter),
+      format in BuildConfig := {
+        val x = (format in BuildSbtConfig).value
+        (format in BuildConfig).value
+      }
+    )
+
+  val settings = SbtScalariform.scalariformSettings ++ Seq(
+    ScalariformKeys.preferences in Compile := formattingPreferences,
+    ScalariformKeys.preferences in Test := formattingPreferences
+  )
+
+  val formattingPreferences = {
+    import scalariform.formatter.preferences._
+    FormattingPreferences()
+      .setPreference(RewriteArrowSymbols, false)
+      .setPreference(AlignParameters, true)
+      .setPreference(AlignSingleLineCaseStatements, true)
+      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(IndentSpaces, 2)
+  }
 }
 
