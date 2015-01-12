@@ -127,51 +127,54 @@ package object avro {
 
   /**
    * Only support array field only
+   * TODO map field
    */
-  def limitToSize(record: Record, key: String, size: Int) {
+  def toLimitedSize(record: Record, key: String, size: Int): Option[GenericData.Array[_]] = {
     val field = record.getSchema.getField(key)
-    limitToSize(record, field, size)
+    toLimitedSize(record, field, size)
   }
 
-  def limitToSize(record: Record, field: Schema.Field, size: Int) {
+  def toLimitedSize(record: Record, field: Schema.Field, size: Int): Option[GenericData.Array[_]] = {
     val fieldSchema = field.schema
     fieldSchema.getType match {
       case Type.ARRAY =>
-        fieldSchema.getElementType.getType match {
-          case Type.INT     => arrayLimitToSize[Int](record, field, size, fieldSchema)
-          case Type.LONG    => arrayLimitToSize[Long](record, field, size, fieldSchema)
-          case Type.FLOAT   => arrayLimitToSize[Float](record, field, size, fieldSchema)
-          case Type.DOUBLE  => arrayLimitToSize[Double](record, field, size, fieldSchema)
-          case Type.BOOLEAN => arrayLimitToSize[Boolean](record, field, size, fieldSchema)
-          case Type.BYTES   => arrayLimitToSize[ByteBuffer](record, field, size, fieldSchema)
-          case Type.STRING  => arrayLimitToSize[CharSequence](record, field, size, fieldSchema)
-          case Type.FIXED   => arrayLimitToSize[GenericFixed](record, field, size, fieldSchema)
-          case Type.RECORD  => arrayLimitToSize[IndexedRecord](record, field, size, fieldSchema)
-          case Type.ENUM    => arrayLimitToSize[GenericEnumSymbol](record, field, size, fieldSchema)
-          case Type.MAP     => arrayLimitToSize[java.util.Map[_, _]](record, field, size, fieldSchema)
-          case Type.ARRAY   => arrayLimitToSize[java.util.Collection[_]](record, field, size, fieldSchema)
-          case _            => // todo
+        val values = record.get(field.pos)
+        val xs = fieldSchema.getElementType.getType match {
+          case Type.INT     => toLimitedSize[Int](values.asInstanceOf[GenericData.Array[Int]], size, fieldSchema)
+          case Type.LONG    => toLimitedSize[Long](values.asInstanceOf[GenericData.Array[Long]], size, fieldSchema)
+          case Type.FLOAT   => toLimitedSize[Float](values.asInstanceOf[GenericData.Array[Float]], size, fieldSchema)
+          case Type.DOUBLE  => toLimitedSize[Double](values.asInstanceOf[GenericData.Array[Double]], size, fieldSchema)
+          case Type.BOOLEAN => toLimitedSize[Boolean](values.asInstanceOf[GenericData.Array[Boolean]], size, fieldSchema)
+          case Type.BYTES   => toLimitedSize[ByteBuffer](values.asInstanceOf[GenericData.Array[ByteBuffer]], size, fieldSchema)
+          case Type.STRING  => toLimitedSize[CharSequence](values.asInstanceOf[GenericData.Array[CharSequence]], size, fieldSchema)
+          case Type.FIXED   => toLimitedSize[GenericFixed](values.asInstanceOf[GenericData.Array[GenericFixed]], size, fieldSchema)
+          case Type.RECORD  => toLimitedSize[IndexedRecord](values.asInstanceOf[GenericData.Array[IndexedRecord]], size, fieldSchema)
+          case Type.ENUM    => toLimitedSize[GenericEnumSymbol](values.asInstanceOf[GenericData.Array[GenericEnumSymbol]], size, fieldSchema)
+          case Type.MAP     => toLimitedSize[java.util.Map[_, _]](values.asInstanceOf[GenericData.Array[java.util.Map[_, _]]], size, fieldSchema)
+          case Type.ARRAY   => toLimitedSize[java.util.Collection[_]](values.asInstanceOf[GenericData.Array[java.util.Collection[_]]], size, fieldSchema)
+          case _            => values.asInstanceOf[GenericData.Array[_]] // todo
         }
+        Some(xs)
       case _ =>
+        None
     }
   }
 
-  private def arrayLimitToSize[T](record: Record, field: Schema.Field, size: Int, elemSchema: Schema) = {
-    record.get(field.name) match {
-      case null =>
-      case arr: GenericData.Array[_] =>
-        val l = arr.size
-        if (l > size) {
-          val ori = arr.asInstanceOf[GenericData.Array[T]]
-          val xs = new GenericData.Array[T](size, elemSchema)
-          var i = l - size
-          while (i < l) {
-            xs.add(ori.get(i))
-            i += 1
-          }
-
-          record.put(field.name, xs)
-        }
+  /**
+   * @return an unchanged array or a new array, The original values will never be changed
+   */
+  def toLimitedSize[T](values: GenericData.Array[T], size: Int, fieldSchema: Schema): GenericData.Array[T] = {
+    val l = values.size
+    if (l > size) {
+      val xs = new GenericData.Array[T](size, fieldSchema)
+      var i = l - size
+      while (i < l) {
+        xs.add(values.get(i))
+        i += 1
+      }
+      xs
+    } else {
+      values
     }
   }
 
