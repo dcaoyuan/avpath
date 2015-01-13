@@ -19,6 +19,23 @@ import scala.collection.JavaConverters._
 package object avro {
 
   def avroEncode[T](value: T, schema: Schema): Try[Array[Byte]] = encode[T](value, schema)
+  def avroDecode[T](bytes: Array[Byte], schema: Schema, specified: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = decode[T](bytes, schema, other, specified)
+
+  def jsonEncode(value: Any, schema: Schema): Try[String] =
+    try {
+      val json = ToJson.toAvroJsonString(value, schema)
+      Success(json)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
+
+  def jsonDecode(json: String, schema: Schema, specified: Boolean = false): Try[_] =
+    try {
+      val value = FromJson.fromJsonString(json, schema, specified)
+      Success(value)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
 
   private def encode[T](value: T, schema: Schema): Try[Array[Byte]] = {
     var out: ByteArrayOutputStream = null
@@ -39,8 +56,6 @@ package object avro {
     }
   }
 
-  def avroDecode[T](bytes: Array[Byte], schema: Schema, specified: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = decode[T](bytes, schema, other, specified)
-
   private def decode[T](bytes: Array[Byte], schema: Schema, other: T, toReflect: Boolean): Try[T] = {
     var in: InputStream = null
     try {
@@ -56,18 +71,6 @@ package object avro {
       case ex: Throwable => Failure(ex)
     } finally {
       if (in != null) try { in.close } catch { case _: Throwable => }
-    }
-  }
-
-  def replace(dst: Record, src: Record) {
-    if (dst.getSchema == src.getSchema) {
-      dst.getSchema.getFields.asScala.foreach { f =>
-        val v = src.get(f.name)
-        val t = f.schema.getType
-        if (v != null && (t != Type.ARRAY || !v.asInstanceOf[java.util.Collection[_]].isEmpty) && (t != Type.MAP || !v.asInstanceOf[java.util.Map[_, _]].isEmpty)) {
-          dst.put(f.name, v)
-        }
-      }
     }
   }
 

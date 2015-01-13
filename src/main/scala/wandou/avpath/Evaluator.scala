@@ -325,10 +325,11 @@ object Evaluator {
     }
   }
 
-  def replace(dst: GenericData.Record, src: GenericData.Record) {
-    import scala.collection.JavaConverters._
+  private def replace(dst: GenericData.Record, src: GenericData.Record) {
     if (dst.getSchema == src.getSchema) {
-      dst.getSchema.getFields.asScala.foreach { f =>
+      val fields = dst.getSchema.getFields.iterator
+      while (fields.hasNext) {
+        val f = fields.next
         val v = src.get(f.pos)
         val t = f.schema.getType
         if (v != null && (t != Type.ARRAY || !v.asInstanceOf[java.util.Collection[_]].isEmpty) && (t != Type.MAP || !v.asInstanceOf[java.util.Map[_, _]].isEmpty)) {
