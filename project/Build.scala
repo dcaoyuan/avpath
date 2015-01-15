@@ -12,7 +12,7 @@ object Build extends sbt.Build {
     .settings(releaseSettings: _*)
     .settings(sbtrelease.ReleasePlugin.releaseSettings: _*)
     .settings(libraryDependencies ++= Dependencies.avro ++ Dependencies.test)
-    .settings(XitrumPackage.skip: _*)
+    .settings(Packaging.settings: _*)
     .settings(sbtavro.SbtAvro.avroSettings ++ avroSettingsTest: _*)
     .settings(instrumentSettings: _*)
     .settings(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*)
@@ -133,5 +133,16 @@ object Formatting {
       .setPreference(DoubleIndentClassDeclaration, true)
       .setPreference(IndentSpaces, 2)
   }
+}
+
+object Packaging {
+  import com.typesafe.sbt.SbtNativePackager._
+  import com.typesafe.sbt.packager.Keys._
+  import com.typesafe.sbt.packager.archetypes._
+
+  val settings = packagerSettings ++ deploymentSettings ++
+    packageArchetype.java_application ++ Seq(
+      name := "avpath",
+      NativePackagerKeys.packageName := "avpath")
 }
 
