@@ -20,7 +20,7 @@ object Build extends sbt.Build {
   lazy val basicSettings = Seq(
     organization := "com.wandoulabs.avro",
     version := "0.1.2-SNAPSHOT",
-    scalaVersion := "2.11.4",
+    scalaVersion := "2.11.5",
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers ++= Seq(
       "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
