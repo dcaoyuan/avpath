@@ -115,7 +115,7 @@ To select items in avpath, you use a location path. A location path consists of 
 
 * `.property` — locates property immediately descended from context items
 
-* `..property` — locates property deeply descended from context items
+* `..property` __[TODO]__ — locates property deeply descended from context items
 
 * `.` — locates context items itself
 
@@ -123,7 +123,7 @@ You can use the wildcard symbol (*) instead of exact name of property:
 
 * `.*` — locates all properties immediately descended from the context items
 
-* `..*` — locates all properties deeply descended from the context items
+* `..*` __[TODO]__ — locates all properties deeply descended from the context items
 
 Also avpath allows to join several properties:
 

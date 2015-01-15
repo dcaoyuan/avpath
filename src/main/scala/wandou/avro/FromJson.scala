@@ -72,7 +72,7 @@ object FromJson {
         if (!json.isBoolean) {
           throw new IOException(String.format("Avro schema specifies '%s' but got JSON value: '%s'.", schema, json))
         }
-        json.getBooleanValue()
+        json.getBooleanValue
 
       case Type.ARRAY =>
         if (!json.isNull) {
@@ -99,9 +99,9 @@ object FromJson {
           }
           //assert json instanceof ObjectNode; // Help findbugs out.
           val map = new java.util.HashMap[String, Any]()
-          val it = json.asInstanceOf[ObjectNode].getFields
-          while (it.hasNext) {
-            val entry = it.next()
+          val itr = json.asInstanceOf[ObjectNode].getFields
+          while (itr.hasNext) {
+            val entry = itr.next
             map.put(entry.getKey, fromJsonNode(entry.getValue, schema.getValueType, specified))
           }
           map
