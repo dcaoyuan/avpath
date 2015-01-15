@@ -5,6 +5,7 @@ import java.io.IOException
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
 import org.apache.avro.generic.GenericData
+import org.apache.avro.generic.GenericDatumReader
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.specific.SpecificDatumReader
 import org.apache.avro.specific.SpecificRecord
@@ -78,13 +79,13 @@ object FromJson {
           if (!json.isArray) {
             throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
           }
-          val list = new java.util.ArrayList[Any]()
-          val it = json.getElements
-          while (it.hasNext) {
-            val element = it.next()
-            list.add(fromJsonNode(element, schema.getElementType, specified))
+          val array = newGenericArray(0, schema)
+          val itr = json.getElements
+          while (itr.hasNext) {
+            val element = itr.next
+            addGenericArray(array, fromJsonNode(element, schema.getElementType, specified))
           }
-          list
+          array
         } else {
           null
         }
@@ -343,10 +344,10 @@ object FromJson {
    * @throws IOException on error.
    */
   @throws(classOf[IOException])
-  def fromAvroJsonString(json: String, schema: Schema): Any = {
+  def fromAvroJsonString(json: String, schema: Schema, specific: Boolean = false): Any = {
     val jsonInput = new ByteArrayInputStream(json.getBytes("UTF-8"))
     val decoder = DecoderFactory.get.jsonDecoder(schema, jsonInput)
-    val reader = new SpecificDatumReader[Any](schema)
+    val reader = if (specific) new SpecificDatumReader[Any](schema) else new GenericDatumReader[Any](schema)
     reader.read(null.asInstanceOf[Any], decoder)
   }
 

@@ -142,7 +142,7 @@ object Packaging {
 
   val settings = packagerSettings ++ deploymentSettings ++
     packageArchetype.java_application ++ Seq(
-      name := "avpath",
-      NativePackagerKeys.packageName := "avpath")
+      name := "wandou-avpath",
+      NativePackagerKeys.packageName := "wandou-avpath")
 }
 

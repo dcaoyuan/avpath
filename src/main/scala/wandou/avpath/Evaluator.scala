@@ -27,8 +27,8 @@ import scala.collection.mutable
 object Evaluator {
   sealed trait Target
   final case class TargetRecord(record: GenericData.Record, field: Schema.Field) extends Target
-  final case class TargetArray(array: GenericData.Array[_], idx: Int, arraySchema: Schema) extends Target
-  final case class TargetMap(map: java.util.Map[String, AnyRef], key: String, mapSchema: Schema) extends Target
+  final case class TargetArray(array: java.util.List[_], idx: Int, arraySchema: Schema) extends Target
+  final case class TargetMap(map: java.util.Map[String, _], key: String, mapSchema: Schema) extends Target
 
   object Op {
     def fromCode(code: Int) = code match {
@@ -95,7 +95,7 @@ object Evaluator {
       case Select =>
 
       case Delete =>
-        val processingArrs = new mutable.HashMap[GenericData.Array[_], (Schema, List[Int])]()
+        val processingArrs = new mutable.HashMap[java.util.List[_], (Schema, List[Int])]()
         targets(ctxs) foreach {
           case _: TargetRecord => // cannot apply delete on record
 
@@ -103,7 +103,7 @@ object Evaluator {
             processingArrs += arr -> (schema, idx :: processingArrs.getOrElse(arr, (schema, List[Int]()))._2)
 
           case TargetMap(map, key, _) =>
-            map.asInstanceOf[java.util.Map[String, AnyRef]].remove(key)
+            map.remove(key)
         }
 
         for ((arr, (schema, toRemoved)) <- processingArrs) {
@@ -114,9 +114,9 @@ object Evaluator {
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
             rec.get(field.pos) match {
-              case arr: GenericData.Array[_] => arr.clear
-              case map: java.util.Map[_, _]  => map.clear
-              case _                         => // ?
+              case arr: java.util.List[_]   => arr.clear
+              case map: java.util.Map[_, _] => map.clear
+              case _                        => // ?
             }
 
           case _: TargetArray =>
@@ -166,7 +166,7 @@ object Evaluator {
             getValueType(mapSchema) match {
               case Some(valueSchema) =>
                 val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], valueSchema, false) else value
-                map.asInstanceOf[java.util.Map[String, AnyRef]].put(key, value1.asInstanceOf[AnyRef])
+                map.asInstanceOf[java.util.Map[String, Any]].put(key, value1)
 
               case None =>
             }
@@ -176,7 +176,7 @@ object Evaluator {
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
             rec.get(field.pos) match {
-              case arr: GenericData.Array[_] =>
+              case arr: java.util.List[_] =>
                 getElementType(field.schema) match {
                   case Some(elemSchema) =>
                     val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], elemSchema, false) else value
@@ -202,13 +202,13 @@ object Evaluator {
               case map: java.util.Map[_, _] =>
                 val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], field.schema, false) else value
                 value1 match {
-                  case (k: String, v: Any) =>
-                    map.asInstanceOf[java.util.Map[String, AnyRef]].put(k, v.asInstanceOf[AnyRef])
+                  case (k: String, v) =>
+                    map.asInstanceOf[java.util.Map[String, Any]].put(k, v)
                   case kvs: java.util.Map[_, _] =>
                     val entries = kvs.entrySet.iterator
                     if (entries.hasNext) {
                       val entry = entries.next // should contains only one entry
-                      map.asInstanceOf[java.util.Map[String, AnyRef]].put(entry.getKey.asInstanceOf[String], entry.getValue.asInstanceOf[AnyRef])
+                      map.asInstanceOf[java.util.Map[String, Any]].put(entry.getKey.asInstanceOf[String], entry.getValue)
                     }
                   case _ =>
                 }
@@ -227,7 +227,7 @@ object Evaluator {
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
             rec.get(field.pos) match {
-              case arr: GenericData.Array[_] =>
+              case arr: java.util.List[_] =>
                 getElementType(field.schema) match {
                   case Some(elemSchema) =>
                     val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], field.schema, false) else value
@@ -281,15 +281,15 @@ object Evaluator {
                 value1 match {
                   case xs: List[_] =>
                     xs foreach {
-                      case (k: String, v: Any) => map.asInstanceOf[java.util.Map[String, AnyRef]].put(k, v.asInstanceOf[AnyRef])
-                      case _                   => // ?
+                      case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v.asInstanceOf[Any])
+                      case _              => // ?
                     }
 
                   case xs: java.util.Map[_, _] =>
                     import scala.collection.JavaConversions._
                     xs foreach {
-                      case (k: String, v: Any) => map.asInstanceOf[java.util.Map[String, AnyRef]].put(k, v.asInstanceOf[AnyRef])
-                      case _                   => // ?
+                      case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v.asInstanceOf[Any])
+                      case _              => // ?
                     }
                   case _ => // ?
                 }
@@ -306,18 +306,17 @@ object Evaluator {
     ctxs
   }
 
-  private def arrayUpdate[T](arr: GenericData.Array[_], idx: Int, value: T) {
+  private def arrayUpdate[T](arr: java.util.List[_], idx: Int, value: T) {
     if (idx >= 0 && idx < arr.size) {
-      arr.asInstanceOf[GenericData.Array[T]].set(idx, value)
+      arr.asInstanceOf[java.util.List[T]].set(idx, value)
     }
   }
 
-  private def arrayInsert[T](arr: GenericData.Array[_], value: T) {
-    arr.asInstanceOf[GenericData.Array[T]].add(value)
+  private def arrayInsert[T](arr: java.util.List[_], value: T) {
+    arr.asInstanceOf[java.util.List[T]].add(value)
   }
 
-  private def arrayRemove[T](arr: GenericData.Array[T], _toRemoved: List[Int]) {
-    val xs = new java.util.ArrayList[T]()
+  private def arrayRemove[T](arr: java.util.List[T], _toRemoved: List[Int]) {
     var toRemoved = _toRemoved.sortBy(-_)
     while (toRemoved != Nil) {
       arr.remove(toRemoved.head)
@@ -404,7 +403,7 @@ object Evaluator {
               res ::= Ctx(rec.get(j), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
               j += 1
             }
-          case Ctx(arr: GenericData.Array[_], schema, topLevelField, _) =>
+          case Ctx(arr: java.util.List[_], schema, topLevelField, _) =>
             var n = arr.size
             var j = 0
             while (j < n) {
@@ -444,7 +443,7 @@ object Evaluator {
           case _    =>
         }
 
-      case currCtx @ Ctx(arr: GenericData.Array[_], schema, topLevelField, _) =>
+      case currCtx @ Ctx(arr: java.util.List[_], schema, topLevelField, _) =>
         var i = 0
         while (i < arr.size) {
           getElementType(schema) match {
@@ -469,7 +468,7 @@ object Evaluator {
 
     var res = List[Either[Ctx, Array[Ctx]]]()
     ctx foreach {
-      case currCtx @ Ctx(arr: GenericData.Array[_], schema, topLevelField, _) =>
+      case currCtx @ Ctx(arr: java.util.List[_], schema, topLevelField, _) =>
         posExpr match {
           case PosSyntax(LiteralSyntax("*"), _, _) =>
             val n = arr.size
@@ -584,7 +583,7 @@ object Evaluator {
       case currCtx @ Ctx(map: java.util.Map[_, _], schema, topLevelField, _) =>
         getValueType(schema) match {
           case Some(valueSchema) =>
-            val values = keys map (key => Ctx(map.get(key), valueSchema, topLevelField, Some(TargetMap(map.asInstanceOf[java.util.Map[String, AnyRef]], key, schema))))
+            val values = keys map (key => Ctx(map.get(key), valueSchema, topLevelField, Some(TargetMap(map.asInstanceOf[java.util.Map[String, Any]], key, schema))))
             res :::= values
           case _ =>
         }
