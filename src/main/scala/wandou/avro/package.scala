@@ -6,8 +6,12 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
-import org.apache.avro.generic._
-import org.apache.avro.generic.GenericData.Record
+import org.apache.avro.generic.GenericData
+import org.apache.avro.generic.GenericDatumReader
+import org.apache.avro.generic.GenericDatumWriter
+import org.apache.avro.generic.GenericEnumSymbol
+import org.apache.avro.generic.GenericFixed
+import org.apache.avro.generic.IndexedRecord
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.io.EncoderFactory
 import org.apache.avro.reflect.ReflectDatumReader
@@ -133,12 +137,12 @@ package object avro {
    * Only support array field
    * TODO map field
    */
-  def toLimitedSize(record: Record, key: String, size: Int): Option[java.util.Collection[_]] = {
+  def toLimitedSize(record: IndexedRecord, key: String, size: Int): Option[java.util.Collection[_]] = {
     val field = record.getSchema.getField(key)
     toLimitedSize(record, field, size)
   }
 
-  def toLimitedSize(record: Record, field: Schema.Field, size: Int): Option[java.util.Collection[_]] = {
+  def toLimitedSize(record: IndexedRecord, field: Schema.Field, size: Int): Option[java.util.Collection[_]] = {
     val fieldSchema = field.schema
     fieldSchema.getType match {
       case Type.ARRAY =>

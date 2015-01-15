@@ -18,7 +18,6 @@ import wandou.avpath.Parser.PosSyntax
 import java.nio.ByteBuffer
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
-import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericEnumSymbol
 import org.apache.avro.generic.GenericFixed
 import org.apache.avro.generic.IndexedRecord
@@ -26,7 +25,7 @@ import scala.collection.mutable
 
 object Evaluator {
   sealed trait Target
-  final case class TargetRecord(record: GenericData.Record, field: Schema.Field) extends Target
+  final case class TargetRecord(record: IndexedRecord, field: Schema.Field) extends Target
   final case class TargetArray(array: java.util.List[_], idx: Int, arraySchema: Schema) extends Target
   final case class TargetMap(map: java.util.Map[String, _], key: String, mapSchema: Schema) extends Target
 
@@ -131,8 +130,8 @@ object Evaluator {
           case TargetRecord(rec, null) =>
             val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], rec.getSchema, false) else value
             value1 match {
-              case v: GenericData.Record => replace(rec, v)
-              case _                     => // log.error 
+              case v: IndexedRecord => replace(rec, v)
+              case _                => // log.error 
             }
 
           case TargetRecord(rec, field) =>
@@ -252,9 +251,9 @@ object Evaluator {
                         }
 
                       case xs: java.util.Collection[_] =>
-                        import scala.collection.JavaConversions._
-                        xs foreach { x =>
-                          (elemSchema.getType, x) match {
+                        val itr = xs.iterator
+                        while (itr.hasNext) {
+                          (elemSchema.getType, itr.next) match {
                             case (Type.BOOLEAN, v: Boolean)               => arrayInsert(arr, v)
                             case (Type.INT, v: Int)                       => arrayInsert(arr, v)
                             case (Type.LONG, v: Long)                     => arrayInsert(arr, v)
@@ -268,9 +267,9 @@ object Evaluator {
                             case (Type.ARRAY, v: java.util.Collection[_]) => arrayInsert(arr, v)
                             case (Type.MAP, v: java.util.Map[_, _])       => arrayInsert(arr, v)
                             case _                                        => // todo
+
                           }
                         }
-
                       case _ => // ?
                     }
                   case _ =>
@@ -281,16 +280,20 @@ object Evaluator {
                 value1 match {
                   case xs: List[_] =>
                     xs foreach {
-                      case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v.asInstanceOf[Any])
+                      case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v)
                       case _              => // ?
                     }
 
                   case xs: java.util.Map[_, _] =>
-                    import scala.collection.JavaConversions._
-                    xs foreach {
-                      case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v.asInstanceOf[Any])
-                      case _              => // ?
+                    val itr = xs.entrySet.iterator
+                    while (itr.hasNext) {
+                      val entry = itr.next
+                      entry.getKey match {
+                        case k: String => map.asInstanceOf[java.util.Map[String, Any]].put(k, entry.getValue)
+                        case _         => // ?
+                      }
                     }
+
                   case _ => // ?
                 }
             }
@@ -324,7 +327,7 @@ object Evaluator {
     }
   }
 
-  private def replace(dst: GenericData.Record, src: GenericData.Record) {
+  private def replace(dst: IndexedRecord, src: IndexedRecord) {
     if (dst.getSchema == src.getSchema) {
       val fields = dst.getSchema.getFields.iterator
       while (fields.hasNext) {
@@ -387,14 +390,14 @@ object Evaluator {
       case null =>
         // select record itself
         ctx foreach {
-          case Ctx(rec: GenericData.Record, schema, topLevelField, _) =>
+          case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
             res ::= Ctx(rec, schema, null, Some(TargetRecord(rec, null)))
 
           case _ => // should be rec
         }
       case "*" =>
         ctx foreach {
-          case Ctx(rec: GenericData.Record, schema, topLevelField, _) =>
+          case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
             val fields = getFields(schema)
             var n = fields.size
             var j = 0
@@ -418,7 +421,7 @@ object Evaluator {
 
       case fieldName =>
         ctx foreach {
-          case Ctx(rec: GenericData.Record, schema, topLevelField, _) =>
+          case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
             getField(schema, fieldName) match {
               case Some(field) => res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
               case _           =>
@@ -431,13 +434,14 @@ object Evaluator {
     res.reverse
   }
 
+  // TODO
   private def evaluateDescendantSelector(sel: SelectorSyntax, baseCtx: Any) = {
   }
 
   private def evaluateObjectPredicate(expr: ObjPredSyntax, ctx: List[Ctx]): List[Ctx] = {
     var res = List[Ctx]()
     ctx foreach {
-      case currCtx @ Ctx(rec: GenericData.Record, schema, _, _) =>
+      case currCtx @ Ctx(rec: IndexedRecord, schema, _, _) =>
         evaluateExpr(expr.arg, currCtx) match {
           case true => res ::= currCtx
           case _    =>

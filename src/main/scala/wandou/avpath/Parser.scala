@@ -37,8 +37,8 @@ object Parser {
   final case class PunctToken(value: String, from: Int, to: Int) extends Token[String]
   final case class EOPToken(value: String, from: Int, to: Int) extends Token[String]
 
-  private val UndefinedChar: Char = 0
-  def char(path: Array[Char], idx: Int): Char = if (idx < path.length) path(idx) else UndefinedChar
+  private val UNDEFINED_CHAR: Char = 0
+  def char(path: Array[Char], idx: Int): Char = if (idx < path.length) path(idx) else UNDEFINED_CHAR
 }
 
 /**

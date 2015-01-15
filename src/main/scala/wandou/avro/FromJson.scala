@@ -259,9 +259,7 @@ object FromJson {
    * @throws IOException on error.
    */
   @throws(classOf[IOException])
-  private def newGenericRecord(schema: Schema): GenericData.Record = {
-    new GenericData.Record(schema)
-  }
+  private def newGenericRecord(schema: Schema) = new GenericData.Record(schema)
 
   /**
    * Instantiates a specific record by name.
