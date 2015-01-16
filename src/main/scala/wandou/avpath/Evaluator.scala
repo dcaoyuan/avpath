@@ -321,9 +321,11 @@ object Evaluator {
           var i = 0
           val newTail = new java.util.ArrayList[T]()
           newTail.add(value)
-          while (values.hasNext && i <= idx) {
+          while (values.hasNext) {
             val value = values.next.asInstanceOf[T]
-            if (i >= idx) {
+            if (i == idx) {
+              arr.remove(value)
+            } else if (i > idx) {
               arr.remove(value)
               newTail.add(value)
             }
