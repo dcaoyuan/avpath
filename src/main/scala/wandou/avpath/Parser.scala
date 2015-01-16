@@ -75,7 +75,9 @@ final class Parser {
     val fromRoot = if (match_("^")) {
       lex[Any]()
       true
-    } else false
+    } else {
+      false
+    }
 
     var parts = List[Syntax]()
     var part: Syntax = null
@@ -272,7 +274,7 @@ final class Parser {
     }
   }
 
-  def matchPath() = matchSelector() || match_("^")
+  def matchPath() = matchSelector() || match_("(") || match_("^")
 
   def matchSelector() = {
     lookahead() match {

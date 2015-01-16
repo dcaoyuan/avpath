@@ -150,6 +150,54 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       }
     }
 
+    "select/update record field" should {
+      val record = initAccount()
+      val p = new Parser()
+      val path = ".registerTime"
+      val ast = p.parse(path)
+
+      val res0 = Evaluator.select(record, ast)
+      s"select |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res0.map(_.value).mkString("\n"))
+
+        assertResult(Set("registerTime"))(res0.map(_.topLevelField).map(_.name).toSet)
+        assertResult(List(0))(res0.map(_.value))
+      }
+    }
+
+    "select/update record multiple fields" should {
+      val record = initAccount()
+      val p = new Parser()
+      val path = "(.registerTime| .lastLoginTime)"
+      val ast = p.parse(path)
+
+      val res0 = Evaluator.select(record, ast)
+      s"select |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res0.map(_.value).mkString("\n"))
+
+        assertResult(Set("registerTime", "lastLoginTime"))(res0.map(_.topLevelField).map(_.name).toSet)
+        assertResult(List(0, 0))(res0.map(_.value))
+      }
+    }
+
+    "select/update record multiple fields with nonExist field" should {
+      val record = initAccount()
+      val p = new Parser()
+      val path = "(.registerTime|.nonExist)"
+      val ast = p.parse(path)
+
+      val res0 = Evaluator.select(record, ast)
+      s"select |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res0.map(_.value).mkString("\n"))
+
+        assertResult(Set("registerTime"))(res0.map(_.topLevelField).map(_.name).toSet)
+        assertResult(List(0))(res0.map(_.value))
+      }
+    }
+
     "select/update array field's first [0]" should {
       val record = initAccount()
       val p = new Parser()

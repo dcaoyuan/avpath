@@ -440,7 +440,9 @@ object Evaluator {
         ctxs foreach {
           case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
             val field = rec.getSchema.getField(fieldName)
-            res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
+            if (field != null) {
+              res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
+            }
           case _ => // should be rec
         }
     }
