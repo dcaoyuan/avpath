@@ -356,7 +356,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
       val jsonChargeRecords = """[{"time": -1, "amount": -5.0}, {"time": -2, "amount": -6.0}]"""
 
-      Evaluator.insertAll(record, ast, List(chargeRecord3, chargeRecord4))
+      Evaluator.insertAll(record, ast, java.util.Arrays.asList(chargeRecord3, chargeRecord4))
       Evaluator.insertAllJson(record, ast, jsonChargeRecords)
       val res0 = Evaluator.select(record, ast)
       s"insertAll |${path}|" in {
@@ -477,7 +477,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
       val jsonAppInfos = s"""{"g" : {}, "h" : {"numBlackApps": 10}}"""
 
-      Evaluator.insertAll(record, ast, List(("d", appInfo4), ("e", appInfo5), ("f", appInfo6)))
+      Evaluator.insertAll(record, ast, java.util.Arrays.asList(("d", appInfo4), ("e", appInfo5), ("f", appInfo6)))
       Evaluator.insertAllJson(record, ast, jsonAppInfos)
       val res0 = Evaluator.select(record, ast)
       s"insertAll |${path}|" in {

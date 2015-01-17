@@ -61,7 +61,7 @@ object Evaluator {
     operate(root, ast, Op.Insert, value, isJsonValue = true)
   }
 
-  def insertAll(root: IndexedRecord, ast: PathSyntax, values: List[_]): List[Ctx] = {
+  def insertAll(root: IndexedRecord, ast: PathSyntax, values: java.util.Collection[_]): List[Ctx] = {
     operate(root, ast, Op.InsertAll, values, isJsonValue = false)
   }
 
@@ -213,25 +213,6 @@ object Evaluator {
                 getElementType(field.schema) foreach { elemSchema =>
                   val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], field.schema, false) else value
                   value1 match {
-                    case xs: List[_] =>
-                      xs foreach { x =>
-                        (elemSchema.getType, x) match {
-                          case (Type.BOOLEAN, v: Boolean)               => arrayInsert(arr, v)
-                          case (Type.INT, v: Int)                       => arrayInsert(arr, v)
-                          case (Type.LONG, v: Long)                     => arrayInsert(arr, v)
-                          case (Type.FLOAT, v: Float)                   => arrayInsert(arr, v)
-                          case (Type.DOUBLE, v: Double)                 => arrayInsert(arr, v)
-                          case (Type.BYTES, v: ByteBuffer)              => arrayInsert(arr, v)
-                          case (Type.STRING, v: CharSequence)           => arrayInsert(arr, v)
-                          case (Type.RECORD, v: IndexedRecord)          => arrayInsert(arr, v)
-                          case (Type.ENUM, v: GenericEnumSymbol)        => arrayInsert(arr, v)
-                          case (Type.FIXED, v: GenericFixed)            => arrayInsert(arr, v)
-                          case (Type.ARRAY, v: java.util.Collection[_]) => arrayInsert(arr, v)
-                          case (Type.MAP, v: java.util.Map[_, _])       => arrayInsert(arr, v)
-                          case _                                        => // todo
-                        }
-                      }
-
                     case xs: java.util.Collection[_] =>
                       val itr = xs.iterator
                       while (itr.hasNext) {
@@ -259,10 +240,13 @@ object Evaluator {
               case map: java.util.Map[_, _] =>
                 val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], field.schema, false) else value
                 value1 match {
-                  case xs: List[_] =>
-                    xs foreach {
-                      case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v)
-                      case _              => // ?
+                  case xs: java.util.Collection[_] =>
+                    val itr = xs.iterator
+                    while (itr.hasNext) {
+                      itr.next match {
+                        case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v)
+                        case _              => // ? 
+                      }
                     }
 
                   case xs: java.util.Map[_, _] =>

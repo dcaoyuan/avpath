@@ -1,79 +1,128 @@
 package wandou
 
 import org.apache.avro.generic.IndexedRecord
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+import wandou.avpath.Evaluator.Ctx
 
 package object avpath {
 
-  def select(data: IndexedRecord, path: String): List[Any] = {
+  def select(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.select(data, ast) map (_.value)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.select(data, ast)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
-  def update(data: IndexedRecord, path: String, value: Any) {
+  def update(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.update(data, ast, value)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.update(data, ast, value)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
-  def updateJson(data: IndexedRecord, path: String, value: String) {
+  def updateJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.updateJson(data, ast, value)
-  }
-
-  /**
-   * Applied on array/map only
-   */
-  def insert(data: IndexedRecord, path: String, value: Any) {
-    val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.insert(data, ast, value)
-  }
-
-  /**
-   * Applied on array/map only
-   */
-  def insertJson(data: IndexedRecord, path: String, value: String) {
-    val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.insertJson(data, ast, value)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.updateJson(data, ast, value)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
   /**
    * Applied on array/map only
    */
-  def insertAll(data: IndexedRecord, path: String, values: List[_]) {
+  def insert(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.insertAll(data, ast, values)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.insert(data, ast, value)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
   /**
    * Applied on array/map only
    */
-  def insertAllJson(data: IndexedRecord, path: String, value: String) {
+  def insertJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.insertAllJson(data, ast, value)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.insertJson(data, ast, value)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
+  }
+
+  /**
+   * Applied on array/map only
+   */
+  def insertAll(data: IndexedRecord, path: String, values: java.util.Collection[_]): Try[List[Ctx]] = {
+    val p = new Parser()
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.insertAll(data, ast, values)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
+  }
+
+  /**
+   * Applied on array/map only
+   */
+  def insertAllJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
+    val p = new Parser()
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.insertAllJson(data, ast, value)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
   /**
    * Applied on array/map elements only
    */
-  def delete(data: IndexedRecord, path: String) {
+  def delete(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.delete(data, ast)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.delete(data, ast)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
   /**
    * Applied on array/map only
    */
-  def clear(data: IndexedRecord, path: String) {
+  def clear(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     val p = new Parser()
-    val ast = p.parse(path)
-    Evaluator.clear(data, ast)
+    try {
+      val ast = p.parse(path)
+      val ctxs = Evaluator.clear(data, ast)
+      Success(ctxs)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
   }
 
   object Key {
