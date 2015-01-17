@@ -29,23 +29,15 @@ object Evaluator {
   final case class TargetArray(array: java.util.Collection[_], idx: Int, arraySchema: Schema) extends Target
   final case class TargetMap(map: java.util.Map[String, _], key: String, mapSchema: Schema) extends Target
 
-  object Op {
-    def fromCode(code: Int) = code match {
-      case 0 => Select
-      case 1 => Update
-      case 2 => Delete
-      case 3 => Clear
-      case 4 => Insert
-      case 5 => InsertAll
-    }
+  private object Op {
+    case object Select extends Op
+    case object Update extends Op
+    case object Delete extends Op
+    case object Clear extends Op
+    case object Insert extends Op
+    case object InsertAll extends Op
   }
-  sealed trait Op { def code: Int }
-  case object Select extends Op { def code = 0 }
-  case object Update extends Op { def code = 1 }
-  case object Delete extends Op { def code = 2 }
-  case object Clear extends Op { def code = 3 }
-  case object Insert extends Op { def code = 4 }
-  case object InsertAll extends Op { def code = 5 }
+  private sealed trait Op
 
   final case class Ctx(value: Any, schema: Schema, topLevelField: Schema.Field, target: Option[Target] = None)
 
@@ -54,35 +46,35 @@ object Evaluator {
   }
 
   def update(root: IndexedRecord, ast: PathSyntax, value: Any): List[Ctx] = {
-    operate(root, ast, Update, value, isJsonValue = false)
+    operate(root, ast, Op.Update, value, isJsonValue = false)
   }
 
   def updateJson(root: IndexedRecord, ast: PathSyntax, value: String): List[Ctx] = {
-    operate(root, ast, Update, value, isJsonValue = true)
+    operate(root, ast, Op.Update, value, isJsonValue = true)
   }
 
   def insert(root: IndexedRecord, ast: PathSyntax, value: Any): List[Ctx] = {
-    operate(root, ast, Insert, value, isJsonValue = false)
+    operate(root, ast, Op.Insert, value, isJsonValue = false)
   }
 
   def insertJson(root: IndexedRecord, ast: PathSyntax, value: String): List[Ctx] = {
-    operate(root, ast, Insert, value, isJsonValue = true)
+    operate(root, ast, Op.Insert, value, isJsonValue = true)
   }
 
   def insertAll(root: IndexedRecord, ast: PathSyntax, values: List[_]): List[Ctx] = {
-    operate(root, ast, InsertAll, values, isJsonValue = false)
+    operate(root, ast, Op.InsertAll, values, isJsonValue = false)
   }
 
   def insertAllJson(root: IndexedRecord, ast: PathSyntax, values: String): List[Ctx] = {
-    operate(root, ast, InsertAll, values, isJsonValue = true)
+    operate(root, ast, Op.InsertAll, values, isJsonValue = true)
   }
 
   def delete(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
-    operate(root, ast, Delete, null, false)
+    operate(root, ast, Op.Delete, null, false)
   }
 
   def clear(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
-    operate(root, ast, Clear, null, false)
+    operate(root, ast, Op.Clear, null, false)
   }
 
   private def targets(ctxs: List[Ctx]) = ctxs.flatMap(_.target)
@@ -91,9 +83,9 @@ object Evaluator {
     val ctxs = select(root, ast)
 
     op match {
-      case Select =>
+      case Op.Select =>
 
-      case Delete =>
+      case Op.Delete =>
         val processingArrs = new mutable.HashMap[java.util.Collection[_], (Schema, List[Int])]()
         targets(ctxs) foreach {
           case _: TargetRecord => // cannot apply delete on record
@@ -109,7 +101,7 @@ object Evaluator {
           arrayRemove(arr, toRemoved)
         }
 
-      case Clear =>
+      case Op.Clear =>
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
             rec.get(field.pos) match {
@@ -125,7 +117,7 @@ object Evaluator {
           // why you be here, for Insert, you should op on record's map field directly
         }
 
-      case Update =>
+      case Op.Update =>
         targets(ctxs) foreach {
           case TargetRecord(rec, null) =>
             val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], rec.getSchema, false) else value
@@ -165,7 +157,7 @@ object Evaluator {
             }
         }
 
-      case Insert =>
+      case Op.Insert =>
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
             rec.get(field.pos) match {
@@ -213,7 +205,7 @@ object Evaluator {
           // why you be here, for Insert, you should op on record's map field directly
         }
 
-      case InsertAll =>
+      case Op.InsertAll =>
         targets(ctxs) foreach {
           case TargetRecord(rec, field) =>
             rec.get(field.pos) match {
