@@ -2,7 +2,6 @@ package wandou
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import java.nio.ByteBuffer
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
@@ -12,13 +11,15 @@ import org.apache.avro.generic.GenericDatumWriter
 import org.apache.avro.generic.GenericEnumSymbol
 import org.apache.avro.generic.GenericFixed
 import org.apache.avro.generic.IndexedRecord
+import org.apache.avro.io.BinaryDecoder
+import org.apache.avro.io.BinaryEncoder
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.io.EncoderFactory
-import org.apache.avro.reflect.ReflectDatumReader
 import scala.util.Try
+import org.apache.avro.specific.SpecificDatumReader
+import org.apache.avro.specific.SpecificDatumWriter
 import scala.util.Failure
 import scala.util.Success
-import scala.collection.JavaConverters._
 
 /**
  * For generic presentation:
@@ -41,61 +42,86 @@ import scala.collection.JavaConverters._
  */
 package object avro {
 
-  def avroEncode[T](value: T, schema: Schema): Try[Array[Byte]] = encode[T](value, schema)
-  def avroDecode[T](bytes: Array[Byte], schema: Schema, specified: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = decode[T](bytes, schema, other, specified)
+  /**
+   * Reused encoder/decoder, not thread safe.
+   */
+  final class EncoderDecoder {
+    private var encoder: BinaryEncoder = _
+    private var decoder: BinaryDecoder = _
+    private lazy val specificReader = new SpecificDatumReader()
+    private lazy val specificWriter = new SpecificDatumWriter()
+    private lazy val genericReader = new GenericDatumReader()
+    private lazy val genericWriter = new GenericDatumWriter()
 
-  def jsonEncode(value: Any, schema: Schema): Try[String] =
-    try {
-      val json = ToJson.toAvroJsonString(value, schema)
-      Success(json)
-    } catch {
-      case ex: Throwable => Failure(ex)
+    def avroEncode[T](value: T, schema: Schema, specific: Boolean = false): Try[Array[Byte]] = {
+      val out = new ByteArrayOutputStream()
+      try {
+        encoder = EncoderFactory.get.binaryEncoder(out, encoder)
+        val writer = if (specific)
+          specificWriter.asInstanceOf[SpecificDatumWriter[T]]
+        else
+          genericWriter.asInstanceOf[GenericDatumWriter[T]]
+
+        writer.setSchema(schema)
+        writer.write(value, encoder)
+        encoder.flush()
+
+        Success(out.toByteArray)
+      } catch {
+        case ex: Throwable => Failure(ex)
+      } finally {
+        out.close
+      }
     }
 
-  def jsonDecode(json: String, schema: Schema, specified: Boolean = false): Try[_] =
+    def avroDecode[T](bytes: Array[Byte], schema: Schema, specific: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = {
+      val in = new ByteArrayInputStream(bytes)
+      try {
+        decoder = DecoderFactory.get.binaryDecoder(in, decoder)
+        val reader = if (specific)
+          specificReader.asInstanceOf[SpecificDatumReader[T]]
+        else
+          genericReader.asInstanceOf[GenericDatumReader[T]]
+
+        reader.setSchema(schema)
+        val value = reader.read(other, decoder)
+
+        Success(value)
+      } catch {
+        case ex: Throwable => Failure(ex)
+      } finally {
+        in.close
+      }
+    }
+
+    def jsonEncode(value: Any, schema: Schema): Try[String] = {
+      val out = new ByteArrayOutputStream()
+      try {
+        val encoder = EncoderFactory.get.jsonEncoder(schema, out)
+        val writer = genericWriter.asInstanceOf[GenericDatumWriter[Any]]
+
+        writer.setSchema(schema)
+        writer.write(value, encoder)
+        encoder.flush()
+
+        Success(new String(out.toByteArray))
+      } catch {
+        case ex: Throwable => Failure(ex)
+      }
+    }
+  }
+
+  def avroEncode[T](value: T, schema: Schema): Try[Array[Byte]] = new EncoderDecoder().avroEncode[T](value, schema)
+  def avroDecode[T](bytes: Array[Byte], schema: Schema, specific: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = new EncoderDecoder().avroDecode[T](bytes, schema, specific, other)
+
+  def jsonEncode(value: Any, schema: Schema): Try[String] = new EncoderDecoder().jsonEncode(value, schema)
+  def jsonDecode(json: String, schema: Schema, specific: Boolean = false): Try[_] =
     try {
-      val value = FromJson.fromJsonString(json, schema, specified)
+      val value = FromJson.fromJsonString(json, schema, specific)
       Success(value)
     } catch {
       case ex: Throwable => Failure(ex)
     }
-
-  private def encode[T](value: T, schema: Schema): Try[Array[Byte]] = {
-    var out: ByteArrayOutputStream = null
-    try {
-      out = new ByteArrayOutputStream()
-
-      val encoder = EncoderFactory.get.binaryEncoder(out, null)
-
-      val writer = new GenericDatumWriter[T](schema)
-      writer.write(value, encoder)
-      encoder.flush()
-
-      Success(out.toByteArray)
-    } catch {
-      case ex: Throwable => Failure(ex)
-    } finally {
-      if (out != null) try { out.close } catch { case _: Throwable => }
-    }
-  }
-
-  private def decode[T](bytes: Array[Byte], schema: Schema, other: T, toReflect: Boolean): Try[T] = {
-    var in: InputStream = null
-    try {
-      in = new ByteArrayInputStream(bytes)
-
-      val decoder = DecoderFactory.get.binaryDecoder(in, null)
-
-      val reader = if (toReflect) new ReflectDatumReader[T](schema) else new GenericDatumReader[T](schema)
-      val value = reader.read(other, decoder)
-
-      Success(value)
-    } catch {
-      case ex: Throwable => Failure(ex)
-    } finally {
-      if (in != null) try { in.close } catch { case _: Throwable => }
-    }
-  }
 
   def newGenericArray(capacity: Int, schema: Schema): GenericData.Array[_] = {
     schema.getElementType.getType match {

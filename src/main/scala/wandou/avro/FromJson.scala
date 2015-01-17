@@ -23,6 +23,11 @@ import scala.collection.JavaConversions._
  */
 object FromJson {
   // TODO performance tunning: value cache etc.
+  private val mapper = new ObjectMapper()
+  private val factory = new JsonFactory()
+    .enable(Feature.ALLOW_COMMENTS)
+    .enable(Feature.ALLOW_SINGLE_QUOTES)
+    .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES)
 
   /**
    * Decodes a JSON node as an Avro value.
@@ -36,7 +41,7 @@ object FromJson {
    * @throws IOException on error.
    */
   @throws(classOf[IOException])
-  def fromJsonNode(json: JsonNode, schema: Schema, specified: Boolean = false): Any = {
+  def fromJsonNode(json: JsonNode, schema: Schema, specific: Boolean = false): Any = {
     schema.getType match {
       case Type.INT =>
         if (!json.isInt) {
@@ -83,7 +88,7 @@ object FromJson {
           val itr = json.getElements
           while (itr.hasNext) {
             val element = itr.next
-            addGenericArray(array, fromJsonNode(element, schema.getElementType, specified))
+            addGenericArray(array, fromJsonNode(element, schema.getElementType, specific))
           }
           array
         } else {
@@ -102,7 +107,7 @@ object FromJson {
           val itr = json.asInstanceOf[ObjectNode].getFields
           while (itr.hasNext) {
             val entry = itr.next
-            map.put(entry.getKey, fromJsonNode(entry.getValue, schema.getValueType, specified))
+            map.put(entry.getKey, fromJsonNode(entry.getValue, schema.getValueType, specific))
           }
           map
         } else {
@@ -115,21 +120,21 @@ object FromJson {
             throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
           }
           var fields = json.getFieldNames.toSet
-          val record = if (specified) newSpecificRecord(schema.getFullName) else newGenericRecord(schema)
+          val record = if (specific) newSpecificRecord(schema.getFullName) else newGenericRecord(schema)
           val fieldsIter = schema.getFields.iterator
           while (fieldsIter.hasNext) {
             val field = fieldsIter.next
             val fieldName = field.name
             val fieldElement = json.get(fieldName)
             if (fieldElement != null) {
-              val fieldValue = fromJsonNode(fieldElement, field.schema, specified)
+              val fieldValue = fromJsonNode(fieldElement, field.schema, specific)
               record.put(field.pos, fieldValue)
             } else if (field.defaultValue != null) {
-              record.put(field.pos, fromJsonNode(field.defaultValue, field.schema, specified))
+              record.put(field.pos, fromJsonNode(field.defaultValue, field.schema, specific))
             } else {
               //throw new IOException("Error parsing Avro record '%s' with missing field '%s'.".format(schema.getFullName, field.name))
               val defaultValue = DefaultJsonNode.of(field)
-              record.put(field.pos, fromJsonNode(defaultValue, field.schema, specified))
+              record.put(field.pos, fromJsonNode(defaultValue, field.schema, specific))
             }
             fields -= fieldName
           }
@@ -142,7 +147,7 @@ object FromJson {
         }
 
       case Type.UNION =>
-        fromUnionJsonNode(json, schema, specified)
+        fromUnionJsonNode(json, schema, specific)
 
       case Type.NULL =>
         if (!json.isNull) {
@@ -162,7 +167,7 @@ object FromJson {
           throw new IOException("Avro schema specifies enum '%s' but got non-string JSON value: '%s'.".format(schema, json))
         }
         val enumValStr = json.getTextValue
-        if (specified) enumValue(schema.getFullName, enumValStr) else enumGenericValue(schema, enumValStr)
+        if (specific) enumValue(schema.getFullName, enumValStr) else enumGenericValue(schema, enumValStr)
 
       case _ =>
         throw new RuntimeException("Unexpected schema type: " + schema)
@@ -193,14 +198,14 @@ object FromJson {
     }
 
     /** Map from Avro schema type to list of schemas of this type in the union. */
-    val typeMap = new java.util.HashMap[Type, java.util.List[Schema]]()
+    val typeToSchemas = new java.util.HashMap[Type, java.util.List[Schema]]()
     val typesIter = schema.getTypes.iterator
     while (typesIter.hasNext) {
       val tpe = typesIter.next
-      var types = typeMap.get(tpe.getType)
+      var types = typeToSchemas.get(tpe.getType)
       if (null == types) {
         types = new java.util.ArrayList[Schema]()
-        typeMap.put(tpe.getType, types)
+        typeToSchemas.put(tpe.getType, types)
       }
       types.add(tpe)
     }
@@ -241,14 +246,11 @@ object FromJson {
    * @throws IOException on error.
    */
   @throws(classOf[IOException])
-  def fromJsonString(json: String, schema: Schema, specified: Boolean = false): Any = {
-    val mapper = new ObjectMapper()
-    val parser = new JsonFactory().createJsonParser(json)
-      .enable(Feature.ALLOW_COMMENTS)
-      .enable(Feature.ALLOW_SINGLE_QUOTES)
-      .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES)
+  def fromJsonString(json: String, schema: Schema, specific: Boolean = false): Any = {
+    val parser = factory.createJsonParser(json)
     val root = mapper.readTree(parser)
-    fromJsonNode(root, schema, specified)
+    parser.close()
+    fromJsonNode(root, schema, specific)
   }
 
   /**
