@@ -19,7 +19,7 @@ object Build extends sbt.Build {
 
   lazy val basicSettings = Seq(
     organization := "com.wandoulabs.avro",
-    version := "0.1.2-SNAPSHOT",
+    version := "0.1.3-SNAPSHOT",
     scalaVersion := "2.11.5",
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers ++= Seq(
