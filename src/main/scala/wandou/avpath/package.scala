@@ -8,10 +8,10 @@ import wandou.avpath.Evaluator.Ctx
 
 package object avpath {
 
-  def select(data: IndexedRecord, path: String): Try[List[Ctx]] = {
-    val p = new Parser()
+  def select(data: IndexedRecord, path: String): Try[List[Ctx]] = select(new Parser())(data, path)
+  def select(parser: Parser)(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     try {
-      val ast = p.parse(path)
+      val ast = parser.parse(path)
       val ctxs = Evaluator.select(data, ast)
       Success(ctxs)
     } catch {
@@ -19,7 +19,8 @@ package object avpath {
     }
   }
 
-  def update(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = {
+  def update(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = update(new Parser())(data, path, value)
+  def update(parser: Parser)(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -30,7 +31,8 @@ package object avpath {
     }
   }
 
-  def updateJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
+  def updateJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = updateJson(new Parser())(data, path, value)
+  def updateJson(parser: Parser)(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -44,7 +46,8 @@ package object avpath {
   /**
    * Applied on array/map only
    */
-  def insert(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = {
+  def insert(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = insert(new Parser())(data, path, value)
+  def insert(parser: Parser)(data: IndexedRecord, path: String, value: Any): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -58,7 +61,8 @@ package object avpath {
   /**
    * Applied on array/map only
    */
-  def insertJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
+  def insertJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = insertJson(new Parser())(data, path, value)
+  def insertJson(parser: Parser)(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -72,7 +76,8 @@ package object avpath {
   /**
    * Applied on array/map only
    */
-  def insertAll(data: IndexedRecord, path: String, values: java.util.Collection[_]): Try[List[Ctx]] = {
+  def insertAll(data: IndexedRecord, path: String, values: java.util.Collection[_]): Try[List[Ctx]] = insertAll(new Parser())(data, path, values)
+  def insertAll(parser: Parser)(data: IndexedRecord, path: String, values: java.util.Collection[_]): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -86,7 +91,8 @@ package object avpath {
   /**
    * Applied on array/map only
    */
-  def insertAllJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
+  def insertAllJson(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = insertAllJson(new Parser())(data, path, value)
+  def insertAllJson(parser: Parser)(data: IndexedRecord, path: String, value: String): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -100,7 +106,8 @@ package object avpath {
   /**
    * Applied on array/map elements only
    */
-  def delete(data: IndexedRecord, path: String): Try[List[Ctx]] = {
+  def delete(data: IndexedRecord, path: String): Try[List[Ctx]] = delete(new Parser())(data, path)
+  def delete(parser: Parser)(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -114,7 +121,8 @@ package object avpath {
   /**
    * Applied on array/map only
    */
-  def clear(data: IndexedRecord, path: String): Try[List[Ctx]] = {
+  def clear(data: IndexedRecord, path: String): Try[List[Ctx]] = clear(new Parser())(data, path)
+  def clear(parser: Parser)(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     val p = new Parser()
     try {
       val ast = p.parse(path)
@@ -122,45 +130,6 @@ package object avpath {
       Success(ctxs)
     } catch {
       case ex: Throwable => Failure(ex)
-    }
-  }
-
-  object Key {
-    def unapply(x: Key) = Some(x.fullPath)
-
-    val Empty = Key(null)
-  }
-
-  implicit final class Key(val path: String) extends Serializable {
-    private var _parent = Key.Empty
-    private var _fullPath: String = path
-
-    def fullPath = _fullPath
-
-    protected def parent = _parent
-
-    protected def parent_=(parent: Key) {
-      _fullPath = (if (parent == Key.Empty) "" else parent.fullPath + "/") + path
-    }
-
-    def /(path: String) = {
-      val subPath = new Key(path)
-      subPath.parent = this
-      subPath
-    }
-
-    override def toString = _fullPath
-
-    override def equals(other: Any): Boolean = other match {
-      case that: Key =>
-        _parent == that._parent &&
-          path == that.path
-      case _ => false
-    }
-
-    override def hashCode(): Int = {
-      val state = Seq(_parent, path)
-      state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
     }
   }
 
