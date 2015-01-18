@@ -232,7 +232,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
     var json = field.defaultValue
     if (json == null)
       //throw new AvroRuntimeException("Field " + field + " not set and has no default value");
-      json = DefaultJsonNode.of(field)
+      json = DefaultJsonNode.nodeOf(field)
     if (json.isNull &&
       (field.schema.getType == Schema.Type.NULL ||
         (field.schema.getType == Schema.Type.UNION &&

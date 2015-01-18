@@ -20,11 +20,11 @@ import scala.collection.JavaConversions._
 /**
  * Decode a JSON string into an Avro value.
  *
+ * TODO performance tunning: value cache etc.
  */
 object FromJson {
-  // TODO performance tunning: value cache etc.
-  private val mapper = new ObjectMapper()
-  private val factory = new JsonFactory()
+  private[avro] val mapper = new ObjectMapper()
+  private[avro] val factory = new JsonFactory()
     .enable(Feature.ALLOW_COMMENTS)
     .enable(Feature.ALLOW_SINGLE_QUOTES)
     .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES)
@@ -44,130 +44,141 @@ object FromJson {
   def fromJsonNode(json: JsonNode, schema: Schema, specific: Boolean = false): Any = {
     schema.getType match {
       case Type.INT =>
-        if (!json.isInt) {
+        if (json.isInt) {
+          json.getIntValue
+        } else {
           throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
         }
-        json.getIntValue
 
       case Type.LONG =>
-        if (!json.isLong && !json.isInt) {
+        if (json.isLong || json.isInt) {
+          json.getLongValue
+        } else {
           throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
         }
-        json.getLongValue
 
       case Type.FLOAT =>
         if (json.isDouble || json.isInt || json.isLong) {
-          return json.getDoubleValue.toFloat
+          json.getDoubleValue.toFloat
+        } else {
+          throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
         }
-        throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
 
       case Type.DOUBLE =>
         if (json.isDouble || json.isInt || json.isLong) {
-          return json.getDoubleValue
-        }
-        throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
-
-      case Type.STRING =>
-        if (!json.isTextual) {
+          json.getDoubleValue
+        } else {
           throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
         }
-        json.getTextValue
+
+      case Type.STRING =>
+        if (json.isTextual) {
+          json.getTextValue
+        } else {
+          throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
+        }
 
       case Type.BOOLEAN =>
-        if (!json.isBoolean) {
+        if (json.isBoolean) {
+          json.getBooleanValue
+        } else {
           throw new IOException(String.format("Avro schema specifies '%s' but got JSON value: '%s'.", schema, json))
         }
-        json.getBooleanValue
 
       case Type.ARRAY =>
-        if (!json.isNull) {
-          if (!json.isArray) {
+        if (json.isNull) {
+          null
+        } else {
+          if (json.isArray) {
+            val arr = newGenericArray(0, schema)
+            val itr = json.getElements
+            while (itr.hasNext) {
+              val element = itr.next
+              addGenericArray(arr, fromJsonNode(element, schema.getElementType, specific))
+            }
+            arr
+          } else {
             throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
           }
-          val array = newGenericArray(0, schema)
-          val itr = json.getElements
-          while (itr.hasNext) {
-            val element = itr.next
-            addGenericArray(array, fromJsonNode(element, schema.getElementType, specific))
-          }
-          array
-        } else {
-          null
         }
 
       case Type.MAP =>
-        if (!json.isNull) {
-          if (!json.isObject) {
-            throw new IOException(String.format(
-              "Avro schema specifies '%s' but got JSON value: '%s'.",
-              schema, json))
-          }
-          //assert json instanceof ObjectNode; // Help findbugs out.
-          val map = new java.util.HashMap[String, Any]()
-          val itr = json.asInstanceOf[ObjectNode].getFields
-          while (itr.hasNext) {
-            val entry = itr.next
-            map.put(entry.getKey, fromJsonNode(entry.getValue, schema.getValueType, specific))
-          }
-          map
-        } else {
+        if (json.isNull) {
           null
+        } else {
+          if (json.isObject) {
+            //assert json instanceof ObjectNode; // Help findbugs out.
+            val map = new java.util.HashMap[String, Any]()
+            val itr = json.asInstanceOf[ObjectNode].getFields
+            while (itr.hasNext) {
+              val entry = itr.next
+              map.put(entry.getKey, fromJsonNode(entry.getValue, schema.getValueType, specific))
+            }
+            map
+          } else {
+            throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
+          }
         }
 
       case Type.RECORD =>
-        if (!json.isNull) {
-          if (!json.isObject) {
+        if (json.isNull) {
+          null
+        } else {
+          if (json.isObject) {
+            var fields = json.getFieldNames.toSet
+            val record = if (specific) newSpecificRecord(schema.getFullName) else newGenericRecord(schema)
+            val itr = schema.getFields.iterator
+            while (itr.hasNext) {
+              val field = itr.next
+              val name = field.name
+              val element = json.get(name)
+              if (element != null) {
+                val value = fromJsonNode(element, field.schema, specific)
+                record.put(field.pos, value)
+              } else {
+                val defaultValue = if (field.defaultValue != null) {
+                  field.defaultValue
+                } else {
+                  DefaultJsonNode.nodeOf(field)
+                }
+                record.put(field.pos, fromJsonNode(defaultValue, field.schema, specific))
+              }
+              fields -= name
+            }
+            if (!fields.isEmpty) {
+              throw new IOException("Error parsing Avro record '%s' with unexpected fields: %s.".format(schema.getFullName, fields.mkString(",")))
+            }
+            record
+          } else {
             throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
           }
-          var fields = json.getFieldNames.toSet
-          val record = if (specific) newSpecificRecord(schema.getFullName) else newGenericRecord(schema)
-          val fieldsIter = schema.getFields.iterator
-          while (fieldsIter.hasNext) {
-            val field = fieldsIter.next
-            val fieldName = field.name
-            val fieldElement = json.get(fieldName)
-            if (fieldElement != null) {
-              val fieldValue = fromJsonNode(fieldElement, field.schema, specific)
-              record.put(field.pos, fieldValue)
-            } else if (field.defaultValue != null) {
-              record.put(field.pos, fromJsonNode(field.defaultValue, field.schema, specific))
-            } else {
-              //throw new IOException("Error parsing Avro record '%s' with missing field '%s'.".format(schema.getFullName, field.name))
-              val defaultValue = DefaultJsonNode.of(field)
-              record.put(field.pos, fromJsonNode(defaultValue, field.schema, specific))
-            }
-            fields -= fieldName
-          }
-          if (!fields.isEmpty) {
-            throw new IOException("Error parsing Avro record '%s' with unexpected fields: %s.".format(schema.getFullName, fields.mkString(",")))
-          }
-          record
-        } else {
-          null
         }
 
       case Type.UNION =>
         fromUnionJsonNode(json, schema, specific)
 
       case Type.NULL =>
-        if (!json.isNull) {
+        if (json.isNull) {
+          null
+        } else {
           throw new IOException("Avro schema specifies '%s' but got JSON value: '%s'.".format(schema, json))
         }
-        null
 
       case Type.BYTES | Type.FIXED =>
-        if (!json.isTextual) {
+        if (json.isTextual) {
+          // TODO: parse string into byte array.
+          throw new RuntimeException("Parsing byte arrays is not implemented yet")
+        } else {
           throw new IOException("Avro schema specifies '%s' but got non-string JSON value: '%s'.".format(schema, json))
         }
-        // TODO: parse string into byte array.
-        throw new RuntimeException("Parsing byte arrays is not implemented yet")
 
       case Type.ENUM =>
-        if (!json.isTextual) {
+        if (json.isTextual) {
+          val enumValStr = json.getTextValue
+          if (specific) enumValue(schema.getFullName, enumValStr) else enumGenericValue(schema, enumValStr)
+        } else {
           throw new IOException("Avro schema specifies enum '%s' but got non-string JSON value: '%s'.".format(schema, json))
         }
-        val enumValStr = json.getTextValue
-        if (specific) enumValue(schema.getFullName, enumValStr) else enumGenericValue(schema, enumValStr)
 
       case _ =>
         throw new RuntimeException("Unexpected schema type: " + schema)
@@ -189,7 +200,7 @@ object FromJson {
     }
 
     try {
-      val optionalType = getFirstNoNullTypeOfUnion(schema)
+      val optionalType = getFirstNonNullTypeOfUnion(schema)
       if (optionalType != null) {
         return if (json.isNull) null else fromJsonNode(json, optionalType, specified)
       }
@@ -351,7 +362,7 @@ object FromJson {
     reader.read(null.asInstanceOf[Any], decoder)
   }
 
-  def getFirstNoNullTypeOfUnion(schema: Schema) = {
+  def getFirstNonNullTypeOfUnion(schema: Schema) = {
     val tpes = schema.getTypes.iterator
     var firstNonNullType: Schema = null
     while (tpes.hasNext && firstNonNullType == null) {

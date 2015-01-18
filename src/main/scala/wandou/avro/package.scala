@@ -70,7 +70,7 @@ package object avro {
       } catch {
         case ex: Throwable => Failure(ex)
       } finally {
-        out.close
+        out.close()
       }
     }
 
@@ -90,7 +90,7 @@ package object avro {
       } catch {
         case ex: Throwable => Failure(ex)
       } finally {
-        in.close
+        in.close()
       }
     }
 
@@ -107,14 +107,21 @@ package object avro {
         Success(new String(out.toByteArray))
       } catch {
         case ex: Throwable => Failure(ex)
+      } finally {
+        out.close()
       }
     }
   }
 
-  def avroEncode[T](value: T, schema: Schema): Try[Array[Byte]] = new EncoderDecoder().avroEncode[T](value, schema)
-  def avroDecode[T](bytes: Array[Byte], schema: Schema, specific: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = new EncoderDecoder().avroDecode[T](bytes, schema, specific, other)
+  def avroEncode[T](value: T, schema: Schema): Try[Array[Byte]] =
+    new EncoderDecoder().avroEncode[T](value, schema)
 
-  def jsonEncode(value: Any, schema: Schema): Try[String] = new EncoderDecoder().jsonEncode(value, schema)
+  def avroDecode[T](bytes: Array[Byte], schema: Schema, specific: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] =
+    new EncoderDecoder().avroDecode[T](bytes, schema, specific, other)
+
+  def jsonEncode(value: Any, schema: Schema): Try[String] =
+    new EncoderDecoder().jsonEncode(value, schema)
+
   def jsonDecode(json: String, schema: Schema, specific: Boolean = false): Try[_] =
     try {
       val value = FromJson.fromJsonString(json, schema, specific)
