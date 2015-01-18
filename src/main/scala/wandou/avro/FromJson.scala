@@ -9,25 +9,14 @@ import org.apache.avro.generic.GenericDatumReader
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.specific.SpecificDatumReader
 import org.apache.avro.specific.SpecificRecord
-import org.codehaus.jackson.JsonFactory
 import org.codehaus.jackson.JsonNode
-import org.codehaus.jackson.JsonParser
-import org.codehaus.jackson.JsonParser.Feature
-import org.codehaus.jackson.map.ObjectMapper
 import org.codehaus.jackson.node.ObjectNode
-import scala.collection.JavaConversions._
 
 /**
- * Decode a JSON string into an Avro value.
  *
- * TODO performance tunning: value cache etc.
+ * Decode a JSON string into an Avro value.
  */
 object FromJson {
-  private[avro] val mapper = new ObjectMapper()
-  private[avro] val factory = new JsonFactory()
-    .enable(Feature.ALLOW_COMMENTS)
-    .enable(Feature.ALLOW_SINGLE_QUOTES)
-    .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES)
 
   /**
    * Decodes a JSON node as an Avro value.
@@ -125,6 +114,7 @@ object FromJson {
           null
         } else {
           if (json.isObject) {
+            import scala.collection.JavaConversions._
             var fields = json.getFieldNames.toSet
             val record = if (specific) newSpecificRecord(schema.getFullName) else newGenericRecord(schema)
             val itr = schema.getFields.iterator
@@ -258,8 +248,8 @@ object FromJson {
    */
   @throws(classOf[IOException])
   def fromJsonString(json: String, schema: Schema, specific: Boolean = false): Any = {
-    val parser = factory.createJsonParser(json)
-    val root = mapper.readTree(parser)
+    val parser = JSON_FACTORY.createJsonParser(json)
+    val root = JSON_MAPPER.readTree(parser)
     parser.close()
     fromJsonNode(root, schema, specific)
   }

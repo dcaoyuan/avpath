@@ -10,19 +10,13 @@ import org.apache.avro.generic.GenericEnumSymbol
 import org.apache.avro.generic.IndexedRecord
 import org.apache.avro.io.EncoderFactory
 import org.apache.avro.specific.SpecificDatumWriter
-import org.codehaus.jackson.JsonFactory
 import org.codehaus.jackson.JsonNode
-import org.codehaus.jackson.map.ObjectMapper
-import org.codehaus.jackson.node.JsonNodeFactory
 
 /**
  *
  * Encode an Avro value into JSON.
  */
 object ToJson {
-
-  private val JSON_FACTORY = new JsonFactory()
-  private val JSON_NODE_FACTORY = JsonNodeFactory.instance
 
   /**
    * Serializes a Java Avro value into JSON.
@@ -179,8 +173,7 @@ object ToJson {
     // in the table layout. This is a HACK and needs a better solution.
     // TODO: Find better solution.
     //generator.disable(Feature.QUOTE_FIELD_NAMES);
-    val mapper = new ObjectMapper()
-    mapper.writeValue(generator, node)
+    JSON_MAPPER.writeValue(generator, node)
     stringWriter.toString
   }
 

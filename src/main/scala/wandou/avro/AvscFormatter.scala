@@ -3,7 +3,7 @@ package wandou.avro
 import java.io.File
 import org.apache.avro.Schema
 
-object AvscFormat extends App {
+object AvscFormatter extends App {
   val usage =
     """
       Usage: AvscFormat filePath

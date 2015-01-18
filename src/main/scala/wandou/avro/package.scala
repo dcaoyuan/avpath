@@ -2,6 +2,7 @@ package wandou
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.StringWriter
 import java.nio.ByteBuffer
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
@@ -15,11 +16,16 @@ import org.apache.avro.io.BinaryDecoder
 import org.apache.avro.io.BinaryEncoder
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.io.EncoderFactory
-import scala.util.Try
 import org.apache.avro.specific.SpecificDatumReader
 import org.apache.avro.specific.SpecificDatumWriter
+import org.codehaus.jackson.JsonFactory
+import org.codehaus.jackson.JsonNode
+import org.codehaus.jackson.JsonParser.Feature
+import org.codehaus.jackson.map.ObjectMapper
+import org.codehaus.jackson.node.JsonNodeFactory
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 
 /**
  * For generic presentation:
@@ -41,7 +47,32 @@ import scala.util.Success
  * All other types are mapped as in the generic API.
  */
 package object avro {
+  private[avro] val JSON_MAPPER = new ObjectMapper()
+  private[avro] val JSON_FACTORY = new JsonFactory()
+    .enable(Feature.ALLOW_COMMENTS)
+    .enable(Feature.ALLOW_SINGLE_QUOTES)
+    .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES)
+  private[avro] val JSON_NODE_FACTORY = JsonNodeFactory.instance
 
+  object DefaultJsonNode {
+    private val typeToNode = Map(
+      Type.RECORD -> JSON_NODE_FACTORY.objectNode(),
+      Type.ENUM -> JSON_NODE_FACTORY.textNode(""),
+      Type.ARRAY -> JSON_NODE_FACTORY.arrayNode(),
+      Type.MAP -> JSON_NODE_FACTORY.objectNode(),
+      Type.UNION -> JSON_NODE_FACTORY.nullNode,
+      Type.FIXED -> JSON_NODE_FACTORY.textNode(""),
+      Type.STRING -> JSON_NODE_FACTORY.textNode(""),
+      Type.BYTES -> JSON_NODE_FACTORY.textNode(""),
+      Type.INT -> JSON_NODE_FACTORY.numberNode(0),
+      Type.LONG -> JSON_NODE_FACTORY.numberNode(0L),
+      Type.FLOAT -> JSON_NODE_FACTORY.numberNode(0.0),
+      Type.DOUBLE -> JSON_NODE_FACTORY.numberNode(0.0),
+      Type.BOOLEAN -> JSON_NODE_FACTORY.booleanNode(false),
+      Type.NULL -> JSON_NODE_FACTORY.nullNode)
+
+    def nodeOf(field: Schema.Field): JsonNode = typeToNode(field.schema.getType)
+  }
   /**
    * Reused encoder/decoder, not thread safe.
    */
@@ -54,6 +85,7 @@ package object avro {
     private lazy val genericWriter = new GenericDatumWriter()
 
     def avroEncode[T](value: T, schema: Schema, specific: Boolean = false): Try[Array[Byte]] = {
+      // Closing a ByteArrayOutputStream has no effect
       val out = new ByteArrayOutputStream()
       try {
         encoder = EncoderFactory.get.binaryEncoder(out, encoder)
@@ -69,12 +101,11 @@ package object avro {
         Success(out.toByteArray)
       } catch {
         case ex: Throwable => Failure(ex)
-      } finally {
-        out.close()
       }
     }
 
     def avroDecode[T](bytes: Array[Byte], schema: Schema, specific: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] = {
+      // Closing a ByteArrayInputStream has no effect
       val in = new ByteArrayInputStream(bytes)
       try {
         decoder = DecoderFactory.get.binaryDecoder(in, decoder)
@@ -89,26 +120,24 @@ package object avro {
         Success(value)
       } catch {
         case ex: Throwable => Failure(ex)
-      } finally {
-        in.close()
       }
     }
 
     def jsonEncode(value: Any, schema: Schema): Try[String] = {
-      val out = new ByteArrayOutputStream()
+      // Closing a StringWriter has no effect
+      val stringWriter = new StringWriter()
       try {
-        val encoder = EncoderFactory.get.jsonEncoder(schema, out)
+        val generator = JSON_FACTORY.createJsonGenerator(stringWriter)
+        val encoder = JsonEncoder(schema, generator)
         val writer = genericWriter.asInstanceOf[GenericDatumWriter[Any]]
 
         writer.setSchema(schema)
         writer.write(value, encoder)
         encoder.flush()
 
-        Success(new String(out.toByteArray))
+        Success(stringWriter.toString)
       } catch {
         case ex: Throwable => Failure(ex)
-      } finally {
-        out.close()
       }
     }
   }
