@@ -245,14 +245,14 @@ avpath allows to use in predicate expressions following types of operators:
     <td>.books{.id >= 1}</td>
   </tr>
   <tr>
-    <td><</td>
+    <td>&lt;</td>
     <td>Returns true if the left operand is less than the right operand</td>
-    <td>.books{.id < 1}</td>
+    <td>.books{.id &lt; 1}</td>
   </tr>
   <tr>
-    <td><=</td>
+    <td>&lt;=</td>
     <td>Returns true if the left operand is less than or equal to the right operand</td>
-    <td>.books{.id <= 1}</td>
+    <td>.books{.id &lt;= 1}</td>
   </tr>
 </table>
 
