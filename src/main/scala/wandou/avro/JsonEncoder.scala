@@ -65,7 +65,7 @@ object JsonEncoder {
 }
 
 @throws(classOf[IOException])
-class JsonEncoder(sc: Schema, private var out: JsonGenerator) extends ParsingEncoder with Parser.ActionHandler {
+final class JsonEncoder(sc: Schema, private var out: JsonGenerator) extends ParsingEncoder with Parser.ActionHandler {
   configure(out)
   private val parser = new Parser(new JsonGrammarGenerator().generate(sc), this)
   /**
@@ -201,7 +201,6 @@ class JsonEncoder(sc: Schema, private var out: JsonGenerator) extends ParsingEnc
   }
 
   @throws(classOf[IOException])
-  @Override
   def writeFixed(bytes: Array[Byte], start: Int, len: Int) {
     parser.advance(Symbol.FIXED)
     val top = parser.popSymbol().asInstanceOf[Symbol.IntCheckAction]
@@ -282,7 +281,6 @@ class JsonEncoder(sc: Schema, private var out: JsonGenerator) extends ParsingEnc
   }
 
   @throws(classOf[IOException])
-  @Override
   def doAction(input: Symbol, top: Symbol): Symbol = {
     if (top.isInstanceOf[Symbol.FieldAdjustAction]) {
       val fa = top.asInstanceOf[Symbol.FieldAdjustAction]

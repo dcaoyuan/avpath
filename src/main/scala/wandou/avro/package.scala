@@ -73,6 +73,7 @@ package object avro {
 
     def nodeOf(field: Schema.Field): JsonNode = typeToNode(field.schema.getType)
   }
+
   /**
    * Reused encoder/decoder, not thread safe.
    */
