@@ -237,14 +237,25 @@ package object avro {
   def toLimitedSize[T](values: java.util.Collection[T], size: Int, fieldSchema: Schema): java.util.Collection[T] = {
     val l = values.size
     if (l > size) {
-      val xs = values.getClass.newInstance
-      val arr = values.toArray.asInstanceOf[Array[T]]
-      var i = l - size
-      while (i < l) {
-        xs.add(arr(i))
-        i += 1
+      values match {
+        case arr: GenericData.Array[T] =>
+          val xs = new GenericData.Array[T](size, arr.getSchema)
+          var i = l - size
+          while (i < l) {
+            xs.add(arr.get(i))
+            i += 1
+          }
+          xs
+        case _ =>
+          val xs = new java.util.ArrayList[T](size)
+          val itr = values.iterator
+          var i = 0
+          while (i < size && itr.hasNext) {
+            xs.add(itr.next)
+            i += 1
+          }
+          xs
       }
-      xs
     } else {
       values
     }
