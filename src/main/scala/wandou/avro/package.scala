@@ -2,7 +2,6 @@ package wandou
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.StringWriter
 import java.nio.ByteBuffer
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
@@ -124,11 +123,11 @@ package object avro {
       }
     }
 
-    def jsonEncode(value: Any, schema: Schema): Try[String] = {
-      // Closing a StringWriter has no effect
-      val stringWriter = new StringWriter()
+    def jsonEncode(value: Any, schema: Schema): Try[Array[Byte]] = {
+      // Closing a ByteArrayOutputStream has no effect
+      val out = new ByteArrayOutputStream()
       try {
-        val generator = JSON_FACTORY.createJsonGenerator(stringWriter)
+        val generator = JSON_FACTORY.createJsonGenerator(out)
         val encoder = JsonEncoder(schema, generator)
         val writer = genericWriter.asInstanceOf[GenericDatumWriter[Any]]
 
@@ -136,7 +135,7 @@ package object avro {
         writer.write(value, encoder)
         encoder.flush()
 
-        Success(stringWriter.toString)
+        Success(out.toByteArray)
       } catch {
         case ex: Throwable => Failure(ex)
       }
@@ -149,13 +148,15 @@ package object avro {
   def avroDecode[T](bytes: Array[Byte], schema: Schema, specific: Boolean = false, other: T = null.asInstanceOf[T]): Try[T] =
     new EncoderDecoder().avroDecode[T](bytes, schema, specific, other)
 
-  def jsonEncode(value: Any, schema: Schema): Try[String] =
+  def jsonEncode(value: Any, schema: Schema): Try[Array[Byte]] =
     new EncoderDecoder().jsonEncode(value, schema)
 
-  def jsonDecode(json: String, schema: Schema, specific: Boolean = false): Try[_] =
+  def jsonDecode(json: String, schema: Schema): Try[_] = jsonDecode(json.getBytes("UTF-8"), schema)
+  def jsonDecode(json: String, schema: Schema, specific: Boolean): Try[_] = jsonDecode(json.getBytes("UTF-8"), schema, specific)
+  def jsonDecode(json: Array[Byte], schema: Schema): Try[_] = jsonDecode(json, schema, false)
+  def jsonDecode(json: Array[Byte], schema: Schema, specific: Boolean): Try[_] =
     try {
-      val value = FromJson.fromJsonString(json, schema, specific)
-      Success(value)
+      Success(FromJson.fromJsonBytes(json, schema, specific))
     } catch {
       case ex: Throwable => Failure(ex)
     }

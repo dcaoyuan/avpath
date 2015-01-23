@@ -248,6 +248,20 @@ object FromJson {
    */
   @throws(classOf[IOException])
   def fromJsonString(json: String, schema: Schema, specific: Boolean = false): Any = {
+    val bytes = json.getBytes("UTF-8")
+    fromJsonBytes(bytes, schema, specific)
+  }
+
+  /**
+   * Decodes a JSON encoded record.
+   *
+   * @param json JSON tree to decode, encoded as a string.
+   * @param schema Avro schema of the value to decode.
+   * @return the decoded value.
+   * @throws IOException on error.
+   */
+  @throws(classOf[IOException])
+  def fromJsonBytes(json: Array[Byte], schema: Schema, specific: Boolean = false): Any = {
     val parser = JSON_FACTORY.createJsonParser(json)
     val root = JSON_MAPPER.readTree(parser)
     parser.close()
