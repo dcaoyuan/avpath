@@ -151,8 +151,15 @@ package object avro {
   def jsonEncode(value: Any, schema: Schema): Try[Array[Byte]] =
     new EncoderDecoder().jsonEncode(value, schema)
 
-  def jsonDecode(json: String, schema: Schema): Try[_] = jsonDecode(json.getBytes("UTF-8"), schema)
-  def jsonDecode(json: String, schema: Schema, specific: Boolean): Try[_] = jsonDecode(json.getBytes("UTF-8"), schema, specific)
+  def jsonDecode(json: String, schema: Schema): Try[_] = jsonDecode(json, schema, false)
+  def jsonDecode(json: String, schema: Schema, specific: Boolean): Try[_] = {
+    try {
+      Success(FromJson.fromJsonString(json, schema, specific))
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
+  }
+
   def jsonDecode(json: Array[Byte], schema: Schema): Try[_] = jsonDecode(json, schema, false)
   def jsonDecode(json: Array[Byte], schema: Schema, specific: Boolean): Try[_] =
     try {

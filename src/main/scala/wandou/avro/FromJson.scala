@@ -248,8 +248,10 @@ object FromJson {
    */
   @throws(classOf[IOException])
   def fromJsonString(json: String, schema: Schema, specific: Boolean = false): Any = {
-    val bytes = json.getBytes("UTF-8")
-    fromJsonBytes(bytes, schema, specific)
+    val parser = JSON_FACTORY.createJsonParser(json)
+    val root = JSON_MAPPER.readTree(parser)
+    parser.close()
+    fromJsonNode(root, schema, specific)
   }
 
   /**
