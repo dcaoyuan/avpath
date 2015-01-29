@@ -3,6 +3,10 @@ avpath
 
 XPath likeness for Avro
 
+.. image:: https://travis-ci.org/wandoulabs/avpath.png
+   :target: https://travis-ci.org/wandoulabs/avpath
+   :alt: avpath build status
+
 avpath User Manual
 ------------------
 
