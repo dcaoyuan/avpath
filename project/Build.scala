@@ -20,7 +20,7 @@ object Build extends sbt.Build {
   lazy val basicSettings = Seq(
     organization := "com.wandoulabs.avro",
     version := "0.1.3-SNAPSHOT",
-    scalaVersion := "2.11.5",
+    scalaVersion := "2.11.6",
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers ++= Seq(
       "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
@@ -31,14 +31,14 @@ object Build extends sbt.Build {
   lazy val avroSettings = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
     sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Compile)(_ / "avsc"),
-    version in sbtavro.SbtAvro.avroConfig := "1.7.5")
+    version in sbtavro.SbtAvro.avroConfig := "1.7.7")
 
   // Todo rewrite sbt-avro to compile in Test phase.
   lazy val avroSettingsTest = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
     sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Test)(_ / "avsc"),
     javaSource in sbtavro.SbtAvro.avroConfig <<= (sourceManaged in Test)(_ / "java" / "compiled_avro"),
-    version in sbtavro.SbtAvro.avroConfig := "1.7.5")
+    version in sbtavro.SbtAvro.avroConfig := "1.7.7")
 
   lazy val releaseSettings = Seq(
     publishTo := {
@@ -86,11 +86,11 @@ object Dependencies {
     "ch.qos.logback" % "logback-classic" % "1.1.2")
 
   val test = Seq(
-    "org.scalamock" %% "scalamock-scalatest-support" % "3.2-RC1" % "test",
-    "org.scalatest" %% "scalatest" % "2.1.3" % "test")
+    "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % Test,
+    "org.scalatest" %% "scalatest" % "2.2.4" % Test)
 
   val avro = Seq(
-    "org.apache.avro" % "avro" % "1.7.6")
+    "org.apache.avro" % "avro" % "1.7.7")
 
   val basic: Seq[ModuleID] = log ++ test ++ avro
 
