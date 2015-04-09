@@ -277,9 +277,9 @@ object Evaluator {
   private def arrayUpdate[T](arr: java.util.Collection[_], idx: Int, value: T) {
     if (idx >= 0) {
       arr match {
-        case xs: java.util.List[_] =>
+        case xs: java.util.List[T] @unchecked =>
           if (idx < xs.size) {
-            xs.asInstanceOf[java.util.List[T]].set(idx, value)
+            xs.set(idx, value)
           }
         case _ =>
           val values = arr.iterator

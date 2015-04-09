@@ -447,14 +447,14 @@ final class Parser {
     if (c1 == '.') {
       if (isDigit(c2)) {
         return None
-      }
-
-      idx += 1
-      if (char(path, idx) == '.') {
-        idx += 1
-        return Some(PunctToken("..", start, idx))
       } else {
-        return Some(PunctToken(".", start, idx))
+        idx += 1
+        if (char(path, idx) == '.') {
+          idx += 1
+          return Some(PunctToken("..", start, idx))
+        } else {
+          return Some(PunctToken(".", start, idx))
+        }
       }
     }
 
@@ -465,13 +465,13 @@ final class Parser {
           idx += 3
           return Some(PunctToken("" + c1 + c2 + c3, start, idx))
         }
-      } else if ("=!^$*><".indexOf(c1) >= 0) {
-        idx += 2
-        return Some(PunctToken("" + c1 + c2, start, idx))
+      } else {
+        if ("=!^$*><".indexOf(c1) >= 0) {
+          idx += 2
+          return Some(PunctToken("" + c1 + c2, start, idx))
+        }
       }
-    }
-
-    if (c1 == c2 && (c1 == '|' || c1 == '&')) {
+    } else if (c2 == '|' && c1 == '|' || c2 == '&' && c1 == '&') {
       idx += 2
       return Some(PunctToken("" + c1 + c2, start, idx))
     }
