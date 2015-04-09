@@ -430,7 +430,7 @@ object Evaluator {
           case _    =>
         }
 
-      case currCtx @ Ctx(arr: java.util.Collection[_], schema, topLevelField, _) =>
+      case Ctx(arr: java.util.Collection[_], schema, topLevelField, _) =>
         getElementType(schema) foreach { elemType =>
           val values = arr.iterator
           var i = 0
@@ -445,7 +445,7 @@ object Evaluator {
           }
         }
 
-      case currCtx @ Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
+      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
         getValueType(schema) foreach { elemType =>
           val entries = map.entrySet.iterator
           while (entries.hasNext) {
@@ -471,7 +471,6 @@ object Evaluator {
     ctxs foreach {
       case currCtx @ Ctx(arr: java.util.Collection[_], schema, topLevelField, _) =>
         getElementType(schema) foreach { elemType =>
-
           posExpr match {
             case PosSyntax(LiteralSyntax("*"), _, _) =>
               val values = arr.iterator
@@ -623,21 +622,18 @@ object Evaluator {
     val keys = syntax.keys
     var res = List[Ctx]()
     ctxs foreach {
-      case currCtx @ Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
+      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
         getValueType(schema) foreach { valueSchema =>
           // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
           val entries = map.entrySet.iterator
           while (entries.hasNext) {
             val entry = entries.next
-            keys foreach {
-              case Left(key) =>
-                if (key == entry.getKey) {
-                  res = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: res
-                }
-              case Right(regex) =>
-                if (regex.matcher(entry.getKey).matches) {
-                  res = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: res
-                }
+            val targetKey = entry.getKey
+            keys.collectFirst {
+              case Left(key) if key == targetKey                    => entry.getValue
+              case Right(regex) if regex.matcher(targetKey).matches => entry.getValue
+            } foreach { value =>
+              res = Ctx(value, valueSchema, topLevelField, Some(TargetMap(map, targetKey, schema))) :: res
             }
           }
         }
@@ -908,7 +904,8 @@ object Evaluator {
    */
   private def getElementType(schema: Schema): Option[Schema] = {
     schema.getType match {
-      case Type.ARRAY => Option(schema.getElementType)
+      case Type.ARRAY =>
+        Option(schema.getElementType)
       case Type.UNION =>
         val unions = schema.getTypes.iterator
         var res: Option[Schema] = None
@@ -928,7 +925,8 @@ object Evaluator {
    */
   private def getValueType(schema: Schema): Option[Schema] = {
     schema.getType match {
-      case Type.MAP => Option(schema.getValueType)
+      case Type.MAP =>
+        Option(schema.getValueType)
       case Type.UNION =>
         val unions = schema.getTypes.iterator
         var res: Option[Schema] = None
