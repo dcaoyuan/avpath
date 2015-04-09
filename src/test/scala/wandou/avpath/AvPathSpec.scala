@@ -406,7 +406,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
         info("Got:\n" + res0.map(_.value).mkString("\n"))
 
         assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
-        assertResult(List(3, 2))(res0.map(_.value))
+        // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
+        assertResult(List(2, 3))(res0.map(_.value.asInstanceOf[Int]).sorted)
       }
 
       Evaluator.update(record, ast, 100)
@@ -430,7 +431,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       }
     }
 
-    "select update map field with regex" should {
+    "select/update map field with regex" should {
       val record = initAccount()
       val path = ".devApps(\"a\" | ~\"b\").numBlackApps"
       val ast = new Parser().parse(path)
@@ -441,7 +442,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
         info("Got:\n" + res0.map(_.value).mkString("\n"))
 
         assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
-        assertResult(List(3, 2))(res0.map(_.value))
+        // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
+        assertResult(List(2, 3))(res0.map(_.value.asInstanceOf[Int]).sorted)
       }
 
       Evaluator.update(record, ast, 100)
@@ -462,6 +464,42 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
         assertResult(Set("devApps"))(res2.map(_.topLevelField.name).toSet)
         assertResult(List(123, 123))(res2.map(_.value))
+      }
+    }
+
+    "select map field with prediction" should {
+      val record = initAccount()
+      val path = ".devApps{.numBlackApps > 2}.numBlackApps"
+      val ast = new Parser().parse(path)
+
+      val res0 = Evaluator.select(record, ast)
+      s"select |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res0.map(_.value).mkString("\n"))
+
+        assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
+        // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
+        assertResult(List(3))(res0.map(_.value.asInstanceOf[Int]).sorted)
+      }
+
+      Evaluator.update(record, ast, 100)
+      val res1 = Evaluator.select(record, ast)
+      s"update |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res1.map(_.value).mkString("\n"))
+
+        assertResult(Set("devApps"))(res1.map(_.topLevelField.name).toSet)
+        assertResult(List(100))(res1.map(_.value))
+      }
+
+      Evaluator.updateJson(record, ast, "123")
+      val res2 = Evaluator.select(record, ast)
+      s"updateJson |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res2.map(_.value).mkString("\n"))
+
+        assertResult(Set("devApps"))(res2.map(_.topLevelField.name).toSet)
+        assertResult(List(123))(res2.map(_.value))
       }
     }
 

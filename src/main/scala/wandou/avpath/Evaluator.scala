@@ -444,7 +444,21 @@ object Evaluator {
             i += 1
           }
         }
-      case _ => // and map?
+
+      case currCtx @ Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
+        getValueType(schema) foreach { elemType =>
+          val entries = map.entrySet.iterator
+          while (entries.hasNext) {
+            val entry = entries.next
+            val elemCtx = Ctx(entry.getValue, elemType, topLevelField, Some(TargetMap(map, entry.getKey, schema)))
+            evaluateExpr(expr.arg, elemCtx) match {
+              case true => res ::= elemCtx
+              case _    =>
+            }
+          }
+        }
+
+      case x => println("what? " + x) // any other condition?
     }
 
     res.reverse
@@ -611,22 +625,21 @@ object Evaluator {
     ctxs foreach {
       case currCtx @ Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
         getValueType(schema) foreach { valueSchema =>
-          var values = List[Ctx]()
+          // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
           val entries = map.entrySet.iterator
           while (entries.hasNext) {
             val entry = entries.next
             keys foreach {
               case Left(key) =>
                 if (key == entry.getKey) {
-                  values = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: values
+                  res = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: res
                 }
               case Right(regex) =>
                 if (regex.matcher(entry.getKey).matches) {
-                  values = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: values
+                  res = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: res
                 }
             }
           }
-          res :::= values
         }
       case _ => // should be map
     }

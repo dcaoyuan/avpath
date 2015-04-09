@@ -243,7 +243,6 @@ final class Parser {
   def parseConcatExpr(): Syntax = {
     expect("(")
 
-    println("parsing concatexpr")
     parseStringOrRegex() match {
       case Some(key) =>
         var keys = List[Either[String, Pattern]](key)
@@ -274,7 +273,6 @@ final class Parser {
   }
 
   def parseStringOrRegex(): Option[Either[String, Pattern]] = {
-    println("parsing StringOrExpr")
     var isRegex = false
     if (match_("~")) {
       lex[Any]()
