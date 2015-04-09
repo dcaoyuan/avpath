@@ -373,7 +373,7 @@ Examples
     avpath.select(doc, ".books{.price < 17}.title", schema)
     // ['Maintainable JavaScript', 'JavaScript: The Good Parts']
 
-Positional predicates
+Array positional predicates
 ~~~~~~~~~~~~~~~~~~~~~
 
 Positional predicates allow you to filter items by their context
@@ -381,7 +381,7 @@ position. Positional predicates are always embedded in square brackets.
 
 There are four available forms:
 
--  ``[ index]`` — returns index-positioned item in context (first item
+-  ``[index]`` — returns index-positioned item in context (first item
    is at index 0), e.g. [3] returns fourth item in context
 
 -  ``[index:]`` — returns items whose index in context is greater or
@@ -400,6 +400,15 @@ Also you can use negative position numbers:
 -  ``[-1]`` — returns last item in context
 
 -  ``[-3:]`` — returns last three items in context
+
+Map key predicates
+~~~~~~~~~~~~~~~~~~~~~
+
+Key predicates allow you to filter items by their key via regex.
+Regex predicates are always embedded in ().
+
+-  ``("key" | ~"key regex")`` — returns items in context (which matches
+   regex
 
 Examples
 ^^^^^^^^

@@ -116,9 +116,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update record itself" should {
       val record = initAccount()
-      val p = new Parser()
       val path = "."
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -152,9 +151,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update record field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".registerTime"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -168,9 +166,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update record multiple fields" should {
       val record = initAccount()
-      val p = new Parser()
       val path = "(.registerTime| .lastLoginTime)"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -184,9 +181,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update record multiple fields with nonExist field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = "(.registerTime|.nonExist)"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -200,9 +196,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update array field's first [0]" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords[0].time"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -236,9 +231,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update array field's last [-1]" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords[-1].time"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -272,9 +266,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update array field's all [0:1]" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords[0:1]{.time > -1}.time"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -288,9 +281,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update array field's all [*]" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords[*].time"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -304,9 +296,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update array field's not more than [0:9]" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords[0:9].time"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -320,9 +311,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "insert to array field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val chargeRecord3 = chargeRecordBuilder.build()
       chargeRecord3.put(Schemas.TIME, 3L)
@@ -343,9 +333,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "insertAll to array field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val chargeRecord3 = chargeRecordBuilder.build()
       chargeRecord3.put(Schemas.TIME, 4L)
@@ -368,7 +357,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       }
 
       val path1 = ".chargeRecords{.time > -1}.time"
-      val ast1 = p.parse(path1)
+      val ast1 = new Parser().parse(path1)
       val res1 = Evaluator.select(record, ast1)
       s"select |${path1}|" in {
         info("AST:\n" + ast1)
@@ -379,7 +368,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       }
 
       val path2 = ".chargeRecords{.time > 3}"
-      val ast2 = p.parse(path2)
+      val ast2 = new Parser().parse(path2)
       val res2 = Evaluator.select(record, ast2)
       s"select |${path2}|" in {
         info("AST:\n" + ast2)
@@ -392,9 +381,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "clear array field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".chargeRecords"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       Evaluator.clear(record, ast)
       val res0 = Evaluator.select(record, ast)
@@ -409,9 +397,43 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "select/update map field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".devApps(\"a\" | \"b\").numBlackApps"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
+
+      val res0 = Evaluator.select(record, ast)
+      s"select |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res0.map(_.value).mkString("\n"))
+
+        assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
+        assertResult(List(3, 2))(res0.map(_.value))
+      }
+
+      Evaluator.update(record, ast, 100)
+      val res1 = Evaluator.select(record, ast)
+      s"update |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res1.map(_.value).mkString("\n"))
+
+        assertResult(Set("devApps"))(res1.map(_.topLevelField.name).toSet)
+        assertResult(List(100, 100))(res1.map(_.value))
+      }
+
+      Evaluator.updateJson(record, ast, "123")
+      val res2 = Evaluator.select(record, ast)
+      s"updateJson |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res2.map(_.value).mkString("\n"))
+
+        assertResult(Set("devApps"))(res2.map(_.topLevelField.name).toSet)
+        assertResult(List(123, 123))(res2.map(_.value))
+      }
+    }
+
+    "select update map field with regex" should {
+      val record = initAccount()
+      val path = ".devApps(\"a\" | ~\"b\").numBlackApps"
+      val ast = new Parser().parse(path)
 
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
@@ -445,13 +467,12 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "insert to map field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".devApps"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val appInfo4 = appInfoBuilder.build()
       val appInfo5 = ToJson.toJsonString(appInfo4)
-      val jsonAppInfoKv = s"""{"e" : {}}"""
+      val jsonAppInfoKv = """{"e" : {}}"""
 
       Evaluator.insert(record, ast, ("d", appInfo4))
       Evaluator.insertJson(record, ast, jsonAppInfoKv)
@@ -467,15 +488,14 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "insertAll to map field" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".devApps"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       val appInfo4 = appInfoBuilder.build()
       val appInfo5 = appInfoBuilder.build()
       val appInfo6 = appInfoBuilder.build()
 
-      val jsonAppInfos = s"""{"g" : {}, "h" : {"numBlackApps": 10}}"""
+      val jsonAppInfos = """{"g" : {}, "h" : {"numBlackApps": 10}}"""
 
       Evaluator.insertAll(record, ast, java.util.Arrays.asList(("d", appInfo4), ("e", appInfo5), ("f", appInfo6)))
       Evaluator.insertAllJson(record, ast, jsonAppInfos)
@@ -491,9 +511,8 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
     "delete map item" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".devApps(\"b\")"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       Evaluator.delete(record, ast)
       val res0 = Evaluator.select(record, ast)
@@ -501,16 +520,15 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
         info("AST:\n" + ast)
         info("Got:\n" + res0.map(_.value).mkString("\n"))
 
-        assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
-        assertResult(null)(res0.map(_.value).head)
+        assertResult(Set())(res0.map(_.topLevelField.name).toSet)
+        assertResult(Nil)(res0.map(_.value))
       }
     }
 
     "clean map items" should {
       val record = initAccount()
-      val p = new Parser()
       val path = ".devApps"
-      val ast = p.parse(path)
+      val ast = new Parser().parse(path)
 
       Evaluator.clear(record, ast)
       val res0 = Evaluator.select(record, ast)

@@ -1,5 +1,7 @@
 package wandou.avpath
 
+import java.util.regex.Pattern
+
 object Parser {
 
   sealed trait Syntax
@@ -15,7 +17,7 @@ object Parser {
   final case class PosSyntax(idx: Syntax, fromIdx: Syntax, toIdx: Syntax) extends Syntax
   final case class LiteralSyntax[T](value: T) extends Syntax
   final case class SubstSyntax(name: String) extends Syntax
-  final case class MapKeysSyntax(keys: List[String]) extends Syntax
+  final case class MapKeysSyntax(keys: List[Either[String, Pattern]]) extends Syntax
 
   class AvroPathException(column: Int, msg: String) extends Exception(msg)
 
@@ -241,29 +243,58 @@ final class Parser {
   def parseConcatExpr(): Syntax = {
     expect("(")
 
+    println("parsing concatexpr")
+    parseStringOrRegex() match {
+      case Some(key) =>
+        var keys = List[Either[String, Pattern]](key)
+        while (match_("|")) {
+          lex[Any]()
+          parseStringOrRegex() match {
+            case Some(more) => keys = more :: keys
+            case None       => // throw sth. ?
+          }
+        }
+
+        expect(")")
+
+        MapKeysSyntax(keys)
+
+      case None =>
+        val expr = parsePath()
+        var operands = List[PathSyntax]()
+        while (match_("|")) {
+          lex[Any]()
+          operands = parsePath() :: (if (operands.isEmpty) List(expr) else operands)
+        }
+
+        expect(")")
+
+        if (operands.nonEmpty) ConcatExprSyntax("|", operands.reverse) else expr
+    }
+  }
+
+  def parseStringOrRegex(): Option[Either[String, Pattern]] = {
+    println("parsing StringOrExpr")
+    var isRegex = false
+    if (match_("~")) {
+      lex[Any]()
+      isRegex = true
+    }
+
     if (matchString()) {
-      val key = lex[String]().value
-      var keys = List[String](key)
-      while (match_("|")) {
-        lex[Any]()
-        keys = lex[String]().value :: keys
+      val token = lex[String]()
+      val key = token.value
+      if (isRegex) {
+        try {
+          Some(Right(Pattern.compile(key)))
+        } catch {
+          case ex: Throwable => throw new AvroPathException(token.from, ex.getMessage)
+        }
+      } else {
+        Some(Left(key))
       }
-
-      expect(")")
-
-      MapKeysSyntax(keys)
-
     } else {
-      val expr = parsePath()
-      var operands = List[PathSyntax]()
-      while (match_("|")) {
-        lex[Any]()
-        operands = parsePath() :: (if (operands.isEmpty) List(expr) else operands)
-      }
-
-      expect(")")
-
-      if (operands.nonEmpty) ConcatExprSyntax("|", operands.reverse) else expr
+      None
     }
   }
 
@@ -476,7 +507,7 @@ final class Parser {
       return Some(PunctToken("" + c1 + c2, start, idx))
     }
 
-    if (":{}()[]^+-*/%!><|".indexOf(c1) >= 0) {
+    if (":{}()[]^+-*/%!><|~".indexOf(c1) >= 0) {
       idx += 1
       Some(PunctToken("" + c1, start, idx))
     } else {

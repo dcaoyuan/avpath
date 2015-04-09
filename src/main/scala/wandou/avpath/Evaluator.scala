@@ -609,9 +609,23 @@ object Evaluator {
     val keys = syntax.keys
     var res = List[Ctx]()
     ctxs foreach {
-      case currCtx @ Ctx(map: java.util.Map[_, _], schema, topLevelField, _) =>
+      case currCtx @ Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
         getValueType(schema) foreach { valueSchema =>
-          val values = keys map (key => Ctx(map.get(key), valueSchema, topLevelField, Some(TargetMap(map.asInstanceOf[java.util.Map[String, Any]], key, schema))))
+          var values = List[Ctx]()
+          val entries = map.entrySet.iterator
+          while (entries.hasNext) {
+            val entry = entries.next
+            keys foreach {
+              case Left(key) =>
+                if (key == entry.getKey) {
+                  values = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: values
+                }
+              case Right(regex) =>
+                if (regex.matcher(entry.getKey).matches) {
+                  values = Ctx(entry.getValue, valueSchema, topLevelField, Some(TargetMap(map, entry.getKey, schema))) :: values
+                }
+            }
+          }
           res :::= values
         }
       case _ => // should be map
