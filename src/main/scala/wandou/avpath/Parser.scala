@@ -257,7 +257,7 @@ final class Parser {
 
         expect(")")
 
-        MapKeysSyntax(keys)
+        MapKeysSyntax(keys.reverse)
 
       case None =>
         val expr = parsePath()
