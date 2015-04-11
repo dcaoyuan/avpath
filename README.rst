@@ -401,15 +401,6 @@ Also you can use negative position numbers:
 
 -  ``[-3:]`` — returns last three items in context
 
-Map key predicates
-~~~~~~~~~~~~~~~~~~~~~
-
-Key predicates allow you to filter items by their key via regex.
-Regex predicates are always embedded in ().
-
--  ``("key" | ~"key regex")`` — returns items in context (which matches
-   regex
-
 Examples
 ^^^^^^^^
 
@@ -438,6 +429,15 @@ Examples
     // find two book titles from second position
     avpath.select(doc, ".books[1:3].title")
     // ['Maintainable JavaScript', 'Agile Software Development']
+
+Map key predicates
+~~~~~~~~~~~~~~~~~~~~~
+
+Key predicates allow you to filter items by their key via regex.
+Regex predicates are always embedded in ().
+
+-  ``("key" | ~"key regex")`` — returns items in context (which matches
+   regex)
 
 Multiple predicates
 ~~~~~~~~~~~~~~~~~~~
