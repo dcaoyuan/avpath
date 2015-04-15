@@ -154,13 +154,14 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       val path = ".registerTime"
       val ast = new Parser().parse(path)
 
+      Evaluator.update(record, ast, 1234L)
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
         info("AST:\n" + ast)
         info("Got:\n" + res0.map(_.value).mkString("\n"))
 
         assertResult(Set("registerTime"))(res0.map(_.topLevelField).map(_.name).toSet)
-        assertResult(List(0))(res0.map(_.value))
+        assertResult(List(1234))(res0.map(_.value))
       }
     }
 
@@ -169,13 +170,14 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       val path = "(.registerTime| .lastLoginTime)"
       val ast = new Parser().parse(path)
 
+      Evaluator.update(record, ast, 1234L)
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
         info("AST:\n" + ast)
         info("Got:\n" + res0.map(_.value).mkString("\n"))
 
         assertResult(Set("registerTime", "lastLoginTime"))(res0.map(_.topLevelField).map(_.name).toSet)
-        assertResult(List(0, 0))(res0.map(_.value))
+        assertResult(List(1234, 1234))(res0.map(_.value))
       }
     }
 
@@ -184,13 +186,14 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       val path = "(.registerTime|.nonExist)"
       val ast = new Parser().parse(path)
 
+      Evaluator.update(record, ast, 1234L)
       val res0 = Evaluator.select(record, ast)
       s"select |${path}|" in {
         info("AST:\n" + ast)
         info("Got:\n" + res0.map(_.value).mkString("\n"))
 
         assertResult(Set("registerTime"))(res0.map(_.topLevelField).map(_.name).toSet)
-        assertResult(List(0))(res0.map(_.value))
+        assertResult(List(1234))(res0.map(_.value))
       }
     }
 
