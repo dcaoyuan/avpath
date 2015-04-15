@@ -619,7 +619,7 @@ object Evaluator {
   }
 
   private def evaluateMapValues(syntax: MapKeysSyntax, ctxs: List[Ctx]): List[Ctx] = {
-    val keys = syntax.keys
+    val expectKeys = syntax.keys
     var res = List[Ctx]()
     ctxs foreach {
       case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
@@ -628,12 +628,12 @@ object Evaluator {
           val entries = map.entrySet.iterator
           while (entries.hasNext) {
             val entry = entries.next
-            val targetKey = entry.getKey
-            keys.collectFirst {
-              case Left(key) if key == targetKey                    => entry.getValue
-              case Right(regex) if regex.matcher(targetKey).matches => entry.getValue
+            val key = entry.getKey
+            expectKeys.collectFirst {
+              case Left(expectKey) if expectKey == key        => entry.getValue
+              case Right(regex) if regex.matcher(key).matches => entry.getValue
             } foreach { value =>
-              res = Ctx(value, valueSchema, topLevelField, Some(TargetMap(map, targetKey, schema))) :: res
+              res = Ctx(value, valueSchema, topLevelField, Some(TargetMap(map, key, schema))) :: res
             }
           }
         }

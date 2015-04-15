@@ -104,7 +104,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       val appInfo3 = appInfoBuilder.build()
       appInfo1.put("numBlackApps", 1)
       appInfo2.put("numBlackApps", 2)
-      appInfo1.put("numBlackApps", 3)
+      appInfo3.put("numBlackApps", 3)
       devApps.put("a", appInfo1)
       devApps.put("b", appInfo2)
       devApps.put("c", appInfo3)
@@ -407,7 +407,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
         assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
         // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
-        assertResult(List(2, 3))(res0.map(_.value.asInstanceOf[Int]).sorted)
+        assertResult(List(1, 2))(res0.map(_.value.asInstanceOf[Int]).sorted)
       }
 
       Evaluator.update(record, ast, 100)
@@ -443,7 +443,7 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
         assertResult(Set("devApps"))(res0.map(_.topLevelField.name).toSet)
         // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
-        assertResult(List(2, 3))(res0.map(_.value.asInstanceOf[Int]).sorted)
+        assertResult(List(1, 2))(res0.map(_.value.asInstanceOf[Int]).sorted)
       }
 
       Evaluator.update(record, ast, 100)
