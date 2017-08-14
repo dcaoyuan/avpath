@@ -19,7 +19,7 @@ object Build extends sbt.Build {
 
   lazy val basicSettings = Seq(
     organization := "com.wandoulabs.avro",
-    version := "0.1.3-SNAPSHOT",
+    version := "0.1.3-talend-SNAPSHOT",
     scalaVersion := "2.11.6",
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers ++= Seq(
@@ -41,12 +41,12 @@ object Build extends sbt.Build {
     version in sbtavro.SbtAvro.avroConfig := "1.7.7")
 
   lazy val releaseSettings = Seq(
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     publishTo := {
-      val nexus = "https://oss.sonatype.org/"
-      if (version.value.trim.endsWith("SNAPSHOT"))
-        Some("snapshots" at nexus + "content/repositories/snapshots")
+      if (isSnapshot.value)
+        Some("talend_nexus_deployment" at "https://artifacts-oss.talend.com/nexus/content/repositories/TalendOpenSourceSnapshot")
       else
-        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+        Some("talend_nexus_deployment"  at "https://artifacts-oss.talend.com/nexus/content/repositories/TalendOpenSourceRelease")
     },
     publishMavenStyle := true,
     publishArtifact in Test := false,
@@ -63,8 +63,8 @@ object Build extends sbt.Build {
        </license>
      </licenses>
      <scm>
-       <url>git@github.com:wandoulabs/avpath.git</url>
-       <connection>scm:git:git@github.com:wandoulabs/avpath.git</connection>
+       <url>git@github.com:talend/avpath.git</url>
+       <connection>scm:git:git@github.com:talend/avpath.git</connection>
      </scm>)
 
   lazy val noPublishing = Seq(
@@ -72,7 +72,8 @@ object Build extends sbt.Build {
     publishLocal := (),
     // required until these tickets are closed https://github.com/sbt/sbt-pgp/issues/42,
     // https://github.com/sbt/sbt-pgp/issues/36
-    publishTo := None)
+    publishTo := None
+  )
 
 }
 
@@ -90,7 +91,7 @@ object Dependencies {
     "org.scalatest" %% "scalatest" % "2.2.4" % Test)
 
   val avro = Seq(
-    "org.apache.avro" % "avro" % "1.7.7")
+    "org.apache.avro" % "avro" % "1.8.1")
 
   val basic: Seq[ModuleID] = log ++ test ++ avro
 
