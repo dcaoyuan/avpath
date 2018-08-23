@@ -16,11 +16,14 @@ import wandou.avpath.Parser.Syntax
 import wandou.avpath.Parser.UnaryExprSyntax
 import wandou.avpath.Parser.PosSyntax
 import java.nio.ByteBuffer
+import java.util.regex.Pattern
+
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
 import org.apache.avro.generic.GenericEnumSymbol
 import org.apache.avro.generic.GenericFixed
 import org.apache.avro.generic.IndexedRecord
+
 import scala.collection.mutable
 
 object Evaluator {
@@ -39,10 +42,22 @@ object Evaluator {
   }
   private sealed trait Op
 
-  final case class Ctx(value: Any, schema: Schema, topLevelField: Schema.Field, target: Option[Target] = None)
+  val pattern: Pattern = Pattern.compile("\\[(\\*|:-?\\d+|-?\\d+:|-?\\d+:-?\\d+)\\]")
+
+  final case class Ctx(value: Any, schema: Schema, topLevelField: Schema.Field, path: String, target: Option[Target] = None) {
+
+    /**
+     * check if an AVPath will retrieve multiples data. This can happen when the AVPath describe in its request a call
+     * to an array, a predicate or a deep location
+     *
+     * @return true if the AVPath contains mention to an array, a predicate or a deep location
+     */
+    def canRetrieveMultipleElements(): Boolean =
+      path.contains("{") || path.contains("..") || pattern.matcher(path).find
+  }
 
   def select(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
-    evaluatePath(ast, List(Ctx(root, root.getSchema, null)), true)
+    evaluatePath(ast, List(Ctx(root, root.getSchema, null, ast.path)), true)
   }
 
   def update(root: IndexedRecord, ast: PathSyntax, value: Any): List[Ctx] = {
@@ -376,26 +391,26 @@ object Evaluator {
       case null =>
         // select record itself
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
-            res ::= Ctx(rec, schema, null, Some(TargetRecord(rec, null)))
+          case Ctx(rec: IndexedRecord, schema, topLevelField, path, _) =>
+            res ::= Ctx(rec, schema, null, path, Some(TargetRecord(rec, null)))
           case _ => // should be rec
         }
       case "*" =>
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
+          case Ctx(rec: IndexedRecord, schema, topLevelField, path, _) =>
             val fields = rec.getSchema.getFields.iterator
             while (fields.hasNext) {
               val field = fields.next
               val value = rec.get(field.pos)
-              res ::= Ctx(value, field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
+              res ::= Ctx(value, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
             }
-          case Ctx(arr: java.util.Collection[_], schema, topLevelField, _) =>
+          case Ctx(arr: java.util.Collection[_], schema, topLevelField, path, _) =>
             getElementType(schema) foreach { elemType =>
               val values = arr.iterator
               var j = 0
               while (values.hasNext) {
                 val value = values.next
-                res ::= Ctx(value, elemType, topLevelField, Some(TargetArray(arr, j, schema)))
+                res ::= Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, j, schema)))
                 j += 1
               }
             }
@@ -404,10 +419,10 @@ object Evaluator {
 
       case fieldName =>
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, schema, topLevelField, _) =>
+          case Ctx(rec: IndexedRecord, schema, topLevelField, path, _) =>
             val field = rec.getSchema.getField(fieldName)
             if (field != null) {
-              res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, Some(TargetRecord(rec, field)))
+              res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
             }
           case _ => // should be rec
         }
@@ -424,19 +439,19 @@ object Evaluator {
   private def evaluateObjectPredicate(expr: ObjPredSyntax, ctxs: List[Ctx]): List[Ctx] = {
     var res = List[Ctx]()
     ctxs foreach {
-      case currCtx @ Ctx(rec: IndexedRecord, _, _, _) =>
+      case currCtx @ Ctx(rec: IndexedRecord, _, _, _, _) =>
         evaluateExpr(expr.arg, currCtx) match {
           case true => res ::= currCtx
           case _    =>
         }
 
-      case Ctx(arr: java.util.Collection[_], schema, topLevelField, _) =>
+      case Ctx(arr: java.util.Collection[_], schema, topLevelField, path, _) =>
         getElementType(schema) foreach { elemType =>
           val values = arr.iterator
           var i = 0
           while (values.hasNext) {
             val value = values.next
-            val elemCtx = Ctx(value, elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+            val elemCtx = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
             evaluateExpr(expr.arg, elemCtx) match {
               case true => res ::= elemCtx
               case _    =>
@@ -445,12 +460,12 @@ object Evaluator {
           }
         }
 
-      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
+      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, path, _) =>
         getValueType(schema) foreach { elemType =>
           val entries = map.entrySet.iterator
           while (entries.hasNext) {
             val entry = entries.next
-            val elemCtx = Ctx(entry.getValue, elemType, topLevelField, Some(TargetMap(map, entry.getKey, schema)))
+            val elemCtx = Ctx(entry.getValue, elemType, topLevelField, path, Some(TargetMap(map, entry.getKey, schema)))
             evaluateExpr(expr.arg, elemCtx) match {
               case true => res ::= elemCtx
               case _    =>
@@ -469,7 +484,7 @@ object Evaluator {
 
     var res = List[Either[Ctx, Array[Ctx]]]()
     ctxs foreach {
-      case currCtx @ Ctx(arr: java.util.Collection[_], schema, topLevelField, _) =>
+      case currCtx @ Ctx(arr: java.util.Collection[_], schema, topLevelField, path, _) =>
         getElementType(schema) foreach { elemType =>
           posExpr match {
             case PosSyntax(LiteralSyntax("*"), _, _) =>
@@ -479,7 +494,7 @@ object Evaluator {
               var i = 0
               while (values.hasNext) {
                 val value = values.next
-                elems(i) = Ctx(value, elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                elems(i) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                 i += 1
               }
               res ::= Right(elems)
@@ -501,7 +516,7 @@ object Evaluator {
                       }
                       values.next
                   }
-                  res ::= Left(Ctx(value, elemType, topLevelField, Some(TargetArray(arr, ix, schema))))
+                  res ::= Left(Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, ix, schema))))
                 case _ =>
               }
 
@@ -519,7 +534,7 @@ object Evaluator {
                           var i = from
                           while (i <= to) {
                             val value = xs.get(i)
-                            elems(i - from) = Ctx(value, elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                            elems(i - from) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                             i += 1
                           }
                         case _ =>
@@ -528,7 +543,7 @@ object Evaluator {
                           while (values.hasNext && i <= to) {
                             val value = values.next
                             if (i >= from) {
-                              elems(i) = Ctx(value, elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                              elems(i) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                             }
                             i += 1
                           }
@@ -551,7 +566,7 @@ object Evaluator {
                     case xs: java.util.List[_] =>
                       var i = from
                       while (i < n) {
-                        elems(i - from) = Ctx(xs.get(i), elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                        elems(i - from) = Ctx(xs.get(i), elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         i += 1
                       }
                     case _ =>
@@ -560,7 +575,7 @@ object Evaluator {
                       while (values.hasNext && i < n) {
                         val value = values.next
                         if (i >= from) {
-                          elems(i - from) = Ctx(value, elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                          elems(i - from) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         }
                         i += 1
                       }
@@ -580,7 +595,7 @@ object Evaluator {
                     case xs: java.util.List[_] =>
                       var i = 0
                       while (i <= to && i < n) {
-                        elems(i) = Ctx(xs.get(i), elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                        elems(i) = Ctx(xs.get(i), elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         i += 1
                       }
                     case _ =>
@@ -589,7 +604,7 @@ object Evaluator {
                       while (values.hasNext && i < n) {
                         val value = values.next
                         if (i <= to) {
-                          elems(i) = Ctx(value, elemType, topLevelField, Some(TargetArray(arr, i, schema)))
+                          elems(i) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         }
                         i += 1
                       }
@@ -622,7 +637,7 @@ object Evaluator {
     val expectKeys = syntax.keys
     var res = List[Ctx]()
     ctxs foreach {
-      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, _) =>
+      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, path, _) =>
         getValueType(schema) foreach { valueSchema =>
           // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
           val entries = map.entrySet.iterator
@@ -633,7 +648,7 @@ object Evaluator {
               case Left(expectKey) if expectKey == key        => entry.getValue
               case Right(regex) if regex.matcher(key).matches => entry.getValue
             } foreach { value =>
-              res = Ctx(value, valueSchema, topLevelField, Some(TargetMap(map, key, schema))) :: res
+              res = Ctx(value, valueSchema, topLevelField, path, Some(TargetMap(map, key, schema))) :: res
             }
           }
         }

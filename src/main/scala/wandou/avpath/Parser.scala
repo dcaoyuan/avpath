@@ -5,7 +5,8 @@ import java.util.regex.Pattern
 object Parser {
 
   sealed trait Syntax
-  final case class PathSyntax(fromRoot: Boolean, parts: List[Syntax]) extends Syntax
+  final case class PathSyntax(path: String, fromRoot: Boolean, parts: List[Syntax]) extends Syntax
+
   final case class SelectorSyntax(selector: String, prop: String) extends Syntax
   final case class ObjPredSyntax(arg: Syntax) extends Syntax
   final case class PosPredSyntax(arg: PosSyntax) extends Syntax
@@ -87,7 +88,7 @@ final class Parser {
       parts ::= part
     }
 
-    PathSyntax(fromRoot, parts.reverse)
+    PathSyntax(path.mkString, fromRoot, parts.reverse)
   }
 
   def parsePathPart(): Syntax = {
