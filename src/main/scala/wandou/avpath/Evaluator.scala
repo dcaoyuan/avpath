@@ -27,24 +27,36 @@ import org.apache.avro.generic.IndexedRecord
 import scala.collection.mutable
 
 object Evaluator {
+
   sealed trait Target
+
   final case class TargetRecord(record: IndexedRecord, field: Schema.Field) extends Target
+
   final case class TargetArray(array: java.util.Collection[_], idx: Int, arraySchema: Schema) extends Target
+
   final case class TargetMap(map: java.util.Map[String, _], key: String, mapSchema: Schema) extends Target
 
   private object Op {
+
     case object Select extends Op
+
     case object Update extends Op
+
     case object Delete extends Op
+
     case object Clear extends Op
+
     case object Insert extends Op
+
     case object InsertAll extends Op
+
   }
+
   private sealed trait Op
 
   val pattern: Pattern = Pattern.compile("\\[(\\*|:-?\\d+|-?\\d+:|-?\\d+:-?\\d+)\\]")
 
-  final case class Ctx(value: Any, schema: Schema, topLevelField: Schema.Field, path: String, target: Option[Target] = None) {
+  final case class Ctx(value: Any, name: String, schema: Schema, topLevelField: Schema.Field, path: String, target: Option[Target] = None) {
 
     /**
      * check if an AVPath will retrieve multiples data. This can happen when the AVPath describe in its request a call
@@ -57,44 +69,44 @@ object Evaluator {
   }
 
   def select(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
-    evaluatePath(ast, List(Ctx(root, root.getSchema, null, ast.path)), true)
+    evaluatePath(ast, List(Ctx(root, "", root.getSchema, null, ast.path)), true)
   }
 
   def update(root: IndexedRecord, ast: PathSyntax, value: Any): List[Ctx] = {
-    operate(root, ast, Op.Update, value, isJsonValue = false)
+    operate(root, "", ast, Op.Update, value, isJsonValue = false)
   }
 
   def updateJson(root: IndexedRecord, ast: PathSyntax, value: String): List[Ctx] = {
-    operate(root, ast, Op.Update, value, isJsonValue = true)
+    operate(root, "", ast, Op.Update, value, isJsonValue = true)
   }
 
   def insert(root: IndexedRecord, ast: PathSyntax, value: Any): List[Ctx] = {
-    operate(root, ast, Op.Insert, value, isJsonValue = false)
+    operate(root, "", ast, Op.Insert, value, isJsonValue = false)
   }
 
   def insertJson(root: IndexedRecord, ast: PathSyntax, value: String): List[Ctx] = {
-    operate(root, ast, Op.Insert, value, isJsonValue = true)
+    operate(root, "", ast, Op.Insert, value, isJsonValue = true)
   }
 
   def insertAll(root: IndexedRecord, ast: PathSyntax, values: java.util.Collection[_]): List[Ctx] = {
-    operate(root, ast, Op.InsertAll, values, isJsonValue = false)
+    operate(root, "", ast, Op.InsertAll, values, isJsonValue = false)
   }
 
   def insertAllJson(root: IndexedRecord, ast: PathSyntax, values: String): List[Ctx] = {
-    operate(root, ast, Op.InsertAll, values, isJsonValue = true)
+    operate(root, "", ast, Op.InsertAll, values, isJsonValue = true)
   }
 
   def delete(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
-    operate(root, ast, Op.Delete, null, false)
+    operate(root, "", ast, Op.Delete, null, false)
   }
 
   def clear(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
-    operate(root, ast, Op.Clear, null, false)
+    operate(root, "", ast, Op.Clear, null, false)
   }
 
   private def targets(ctxs: List[Ctx]) = ctxs.flatMap(_.target)
 
-  private def operate(root: IndexedRecord, ast: PathSyntax, op: Op, value: Any, isJsonValue: Boolean): List[Ctx] = {
+  private def operate(root: IndexedRecord, name: String, ast: PathSyntax, op: Op, value: Any, isJsonValue: Boolean): List[Ctx] = {
     val ctxs = select(root, ast)
 
     op match {
@@ -138,7 +150,7 @@ object Evaluator {
             val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], rec.getSchema, false) else value
             value1 match {
               case v: IndexedRecord => replace(rec, v)
-              case _                => // log.error 
+              case _                => // log.error
             }
 
           case TargetRecord(rec, field) =>
@@ -260,7 +272,7 @@ object Evaluator {
                     while (itr.hasNext) {
                       itr.next match {
                         case (k: String, v) => map.asInstanceOf[java.util.Map[String, Any]].put(k, v)
-                        case _              => // ? 
+                        case _              => // ?
                       }
                     }
 
@@ -391,26 +403,27 @@ object Evaluator {
       case null =>
         // select record itself
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, schema, topLevelField, path, _) =>
-            res ::= Ctx(rec, schema, null, path, Some(TargetRecord(rec, null)))
+          case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, _) =>
+            res ::= Ctx(rec, name, schema, null, path, Some(TargetRecord(rec, null)))
           case _ => // should be rec
         }
       case "*" =>
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, schema, topLevelField, path, _) =>
+          case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, _) =>
             val fields = rec.getSchema.getFields.iterator
             while (fields.hasNext) {
               val field = fields.next
               val value = rec.get(field.pos)
-              res ::= Ctx(value, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
+              res ::= Ctx(value, field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
             }
-          case Ctx(arr: java.util.Collection[_], schema, topLevelField, path, _) =>
+          case Ctx(arr: java.util.Collection[_], name, schema, topLevelField, path, _) =>
             getElementType(schema) foreach { elemType =>
               val values = arr.iterator
               var j = 0
               while (values.hasNext) {
                 val value = values.next
-                res ::= Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, j, schema)))
+                // not sure
+                res ::= Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, j, schema)))
                 j += 1
               }
             }
@@ -419,10 +432,10 @@ object Evaluator {
 
       case fieldName =>
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, schema, topLevelField, path, _) =>
+          case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, _) =>
             val field = rec.getSchema.getField(fieldName)
             if (field != null) {
-              res ::= Ctx(rec.get(field.pos), field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
+              res ::= Ctx(rec.get(field.pos), field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
             }
           case _ => // should be rec
         }
@@ -439,19 +452,20 @@ object Evaluator {
   private def evaluateObjectPredicate(expr: ObjPredSyntax, ctxs: List[Ctx]): List[Ctx] = {
     var res = List[Ctx]()
     ctxs foreach {
-      case currCtx @ Ctx(rec: IndexedRecord, _, _, _, _) =>
+      case currCtx @ Ctx(rec: IndexedRecord, _, _, _, _, _) =>
         evaluateExpr(expr.arg, currCtx) match {
           case true => res ::= currCtx
           case _    =>
         }
 
-      case Ctx(arr: java.util.Collection[_], schema, topLevelField, path, _) =>
+      case Ctx(arr: java.util.Collection[_], name, schema, topLevelField, path, _) =>
         getElementType(schema) foreach { elemType =>
           val values = arr.iterator
           var i = 0
           while (values.hasNext) {
             val value = values.next
-            val elemCtx = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+            // not sure
+            val elemCtx = Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
             evaluateExpr(expr.arg, elemCtx) match {
               case true => res ::= elemCtx
               case _    =>
@@ -460,12 +474,13 @@ object Evaluator {
           }
         }
 
-      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, path, _) =>
+      case Ctx(map: java.util.Map[String, _] @unchecked, name, schema, topLevelField, path, _) =>
         getValueType(schema) foreach { elemType =>
           val entries = map.entrySet.iterator
           while (entries.hasNext) {
             val entry = entries.next
-            val elemCtx = Ctx(entry.getValue, elemType, topLevelField, path, Some(TargetMap(map, entry.getKey, schema)))
+            // TODO not sure
+            val elemCtx = Ctx(entry.getValue, name, elemType, topLevelField, path, Some(TargetMap(map, entry.getKey, schema)))
             evaluateExpr(expr.arg, elemCtx) match {
               case true => res ::= elemCtx
               case _    =>
@@ -484,7 +499,7 @@ object Evaluator {
 
     var res = List[Either[Ctx, Array[Ctx]]]()
     ctxs foreach {
-      case currCtx @ Ctx(arr: java.util.Collection[_], schema, topLevelField, path, _) =>
+      case currCtx @ Ctx(arr: java.util.Collection[_], name, schema, topLevelField, path, _) =>
         getElementType(schema) foreach { elemType =>
           posExpr match {
             case PosSyntax(LiteralSyntax("*"), _, _) =>
@@ -494,7 +509,8 @@ object Evaluator {
               var i = 0
               while (values.hasNext) {
                 val value = values.next
-                elems(i) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                // TODO not sure
+                elems(i) = Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                 i += 1
               }
               res ::= Right(elems)
@@ -516,7 +532,7 @@ object Evaluator {
                       }
                       values.next
                   }
-                  res ::= Left(Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, ix, schema))))
+                  res ::= Left(Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, ix, schema))))
                 case _ =>
               }
 
@@ -534,7 +550,7 @@ object Evaluator {
                           var i = from
                           while (i <= to) {
                             val value = xs.get(i)
-                            elems(i - from) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                            elems(i - from) = Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                             i += 1
                           }
                         case _ =>
@@ -543,7 +559,7 @@ object Evaluator {
                           while (values.hasNext && i <= to) {
                             val value = values.next
                             if (i >= from) {
-                              elems(i) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                              elems(i) = Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                             }
                             i += 1
                           }
@@ -566,7 +582,7 @@ object Evaluator {
                     case xs: java.util.List[_] =>
                       var i = from
                       while (i < n) {
-                        elems(i - from) = Ctx(xs.get(i), elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                        elems(i - from) = Ctx(xs.get(i), name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         i += 1
                       }
                     case _ =>
@@ -575,7 +591,7 @@ object Evaluator {
                       while (values.hasNext && i < n) {
                         val value = values.next
                         if (i >= from) {
-                          elems(i - from) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                          elems(i - from) = Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         }
                         i += 1
                       }
@@ -595,7 +611,7 @@ object Evaluator {
                     case xs: java.util.List[_] =>
                       var i = 0
                       while (i <= to && i < n) {
-                        elems(i) = Ctx(xs.get(i), elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                        elems(i) = Ctx(xs.get(i), name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         i += 1
                       }
                     case _ =>
@@ -604,7 +620,7 @@ object Evaluator {
                       while (values.hasNext && i < n) {
                         val value = values.next
                         if (i <= to) {
-                          elems(i) = Ctx(value, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
+                          elems(i) = Ctx(value, name, elemType, topLevelField, path, Some(TargetArray(arr, i, schema)))
                         }
                         i += 1
                       }
@@ -637,7 +653,7 @@ object Evaluator {
     val expectKeys = syntax.keys
     var res = List[Ctx]()
     ctxs foreach {
-      case Ctx(map: java.util.Map[String, _] @unchecked, schema, topLevelField, path, _) =>
+      case Ctx(map: java.util.Map[String, _] @unchecked, name, schema, topLevelField, path, _) =>
         getValueType(schema) foreach { valueSchema =>
           // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
           val entries = map.entrySet.iterator
@@ -648,7 +664,7 @@ object Evaluator {
               case Left(expectKey) if expectKey == key        => entry.getValue
               case Right(regex) if regex.matcher(key).matches => entry.getValue
             } foreach { value =>
-              res = Ctx(value, valueSchema, topLevelField, path, Some(TargetMap(map, key, schema))) :: res
+              res = Ctx(value, name, valueSchema, topLevelField, path, Some(TargetMap(map, key, schema))) :: res
             }
           }
         }
