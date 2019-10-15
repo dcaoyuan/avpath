@@ -31,14 +31,14 @@ object Build extends sbt.Build {
   lazy val avroSettings = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
     sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Compile)(_ / "avsc"),
-    version in sbtavro.SbtAvro.avroConfig := "1.7.7")
+    version in sbtavro.SbtAvro.avroConfig := "1.8.2")
 
   // Todo rewrite sbt-avro to compile in Test phase.
   lazy val avroSettingsTest = Seq(
     sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
     sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Test)(_ / "avsc"),
     javaSource in sbtavro.SbtAvro.avroConfig <<= (sourceManaged in Test)(_ / "java" / "compiled_avro"),
-    version in sbtavro.SbtAvro.avroConfig := "1.7.7")
+    version in sbtavro.SbtAvro.avroConfig := "1.8.2")
 
   lazy val releaseSettings = Seq(
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
@@ -78,7 +78,7 @@ object Build extends sbt.Build {
 }
 
 object Dependencies {
-  val SLF4J_VERSION = "1.7.7"
+  val SLF4J_VERSION = "1.7.24"
 
   val log = Seq(
     "org.slf4j" % "slf4j-api" % SLF4J_VERSION,
@@ -91,7 +91,7 @@ object Dependencies {
     "org.scalatest" %% "scalatest" % "3.0.8")
 
   val avro = Seq(
-    "org.apache.avro" % "avro" % "1.8.1")
+    "org.apache.avro" % "avro" % "1.8.2")
 
   val basic: Seq[ModuleID] = log ++ test ++ avro
 

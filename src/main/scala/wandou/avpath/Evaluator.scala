@@ -54,14 +54,14 @@ object Evaluator {
   private sealed trait Op
 
   /**
-    *
-    * @param value value retrieve by the AvPath query
-    * @param name name of the current field
-    * @param schema name of the current field
-    * @param topLevelField Name of the parent field
-    * @param path full AvPath to reach the element
-    * @param target target
-    */
+   *
+   * @param value value retrieve by the AvPath query
+   * @param name name of the current field
+   * @param schema name of the current field
+   * @param topLevelField Name of the parent field
+   * @param path full AvPath to reach the element
+   * @param target target
+   */
   final case class Ctx(value: Any, name: String, schema: Schema, topLevelField: Schema.Field, path: String, target: Option[Target] = None)
 
   def select(root: IndexedRecord, ast: PathSyntax): List[Ctx] = {
