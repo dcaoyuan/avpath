@@ -19,7 +19,7 @@ object Build extends sbt.Build {
 
   lazy val basicSettings = Seq(
     organization := "com.wandoulabs.avro",
-    version := "0.1.3-talend-SNAPSHOT",
+    version := "0.1.4-talend-SNAPSHOT",
     scalaVersion := "2.11.6",
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers ++= Seq(
@@ -87,8 +87,8 @@ object Dependencies {
     "ch.qos.logback" % "logback-classic" % "1.1.2")
 
   val test = Seq(
-    "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % Test,
-    "org.scalatest" %% "scalatest" % "2.2.4" % Test)
+    "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0",
+    "org.scalatest" %% "scalatest" % "3.0.8")
 
   val avro = Seq(
     "org.apache.avro" % "avro" % "1.8.1")

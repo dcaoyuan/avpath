@@ -1,10 +1,12 @@
 package wandou
 
 import org.apache.avro.generic.IndexedRecord
+
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import wandou.avpath.Evaluator.Ctx
+import wandou.avpath.Parser.PathSyntax
 
 package object avpath {
 
@@ -12,6 +14,14 @@ package object avpath {
   def select(parser: Parser)(data: IndexedRecord, path: String): Try[List[Ctx]] = {
     try {
       val ast = parser.parse(path)
+      select(ast)(data)
+    } catch {
+      case ex: Throwable => Failure(ex)
+    }
+  }
+
+  def select(ast: PathSyntax)(data: IndexedRecord): Try[List[Ctx]] = {
+    try {
       val ctxs = Evaluator.select(data, ast)
       Success(ctxs)
     } catch {
