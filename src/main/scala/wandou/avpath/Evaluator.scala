@@ -55,12 +55,12 @@ object Evaluator {
 
   /**
    *
-   * @param value value retrieve by the AvPath query
-   * @param name name of the current field
-   * @param schema name of the current field
+   * @param value         value retrieve by the AvPath query
+   * @param name          name of the current field
+   * @param schema        name of the current field
    * @param topLevelField Name of the parent field
-   * @param path full AvPath to reach the element
-   * @param target target
+   * @param path          full AvPath to reach the element
+   * @param target        target
    */
   final case class Ctx(value: Any, name: String, schema: Schema, topLevelField: Schema.Field, path: String, target: Option[Target] = None)
 
@@ -424,6 +424,12 @@ object Evaluator {
                 j += 1
               }
             }
+          case Ctx(_, name, schema, topLevelField, path, _) if unwrapIfNullable(schema).getType eq Type.RECORD =>
+            val fields = unwrapIfNullable(schema).getFields.iterator
+            while (fields.hasNext) {
+              val field = fields.next
+              res ::= Ctx(null, field.name, field.schema, if (topLevelField != null) topLevelField else field , path, None)
+            }
           case _ => // TODO map
         }
 
@@ -434,11 +440,28 @@ object Evaluator {
             if (field != null) {
               res ::= Ctx(rec.get(field.pos), field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
             }
+          case Ctx(_, name, schema, topLevelField, path, _) if unwrapIfNullable(schema).getType eq Type.RECORD =>
+            res ::= Ctx(null, fieldName, unwrapIfNullable(schema).getField(fieldName).schema(), topLevelField, path, None)
           case _ => // should be rec
         }
     }
 
     res.reverse
+  }
+
+  def unwrapIfNullable(schema: Schema): Schema = {
+    if (schema.getType eq Type.UNION) {
+      val unionTypes: java.util.List[Schema] = schema.getTypes
+      if (unionTypes.size == 2) {
+        if (unionTypes.get(0).getType eq Type.NULL) return unionTypes.get(1)
+        if (unionTypes.get(1).getType eq Type.NULL) return unionTypes.get(0)
+      } else if (unionTypes.contains(Schema.create(Type.NULL))) {
+        val typesWithoutNullable = new java.util.ArrayList[Schema](unionTypes)
+        typesWithoutNullable.remove(Schema.create(Type.NULL))
+        return Schema.createUnion(typesWithoutNullable)
+      }
+    }
+    schema
   }
 
   // TODO not support yet
