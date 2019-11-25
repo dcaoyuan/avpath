@@ -428,7 +428,7 @@ object Evaluator {
             val fields = unwrapIfNullable(schema).getFields.iterator
             while (fields.hasNext) {
               val field = fields.next
-              res ::= Ctx(null, field.name, field.schema, if (topLevelField != null) topLevelField else field , path, None)
+              res ::= Ctx(null, field.name, field.schema, if (topLevelField != null) topLevelField else field, path, None)
             }
           case _ => // TODO map
         }
