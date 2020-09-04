@@ -17,6 +17,7 @@ import org.apache.avro.io.parsing.ResolvingGrammarGenerator
 object RecordBuilder {
   /**
    * Creates a RecordBuilder for building Record instances.
+   *
    * @param schema the schema associated with the record class.
    */
   def apply(schema: Schema) = {
@@ -25,6 +26,7 @@ object RecordBuilder {
 
   /**
    * Creates a RecordBuilder by copying an existing RecordBuilder.
+   *
    * @param other the GenericRecordBuilder to copy.
    */
   def apply(other: RecordBuilder) = {
@@ -33,6 +35,7 @@ object RecordBuilder {
 
   /**
    * Creates a RecordBuilder by copying an existing record instance.
+   *
    * @param other the record instance to copy.
    */
   def apply(other: Record) = {
@@ -47,8 +50,11 @@ object RecordBuilder {
       val value = other.get(f.pos)
       // Only set the value if it is not null, if the schema type is null, 
       // or if the schema type is a union that accepts nulls.
-      if (RecordBuilderBase.isValidValue(f, value)) {
+      try {
+        builder.validate(f, value)
         builder.set(f, data.deepCopy(f.schema, value))
+      } catch {
+        case e: AvroRuntimeException => // ignore
       }
     }
     builder
@@ -63,6 +69,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Gets the value of a field.
+   *
    * @param fieldName the name of the field to get.
    * @return the value of the field with the given name, or null if not set.
    */
@@ -70,6 +77,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Gets the value of a field.
+   *
    * @param field the field to get.
    * @return the value of the given field, or null if not set.
    */
@@ -77,6 +85,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Gets the value of a field.
+   *
    * @param pos the position of the field to get.
    * @return the value of the field with the given position, or null if not set.
    */
@@ -84,14 +93,16 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Sets the value of a field.
+   *
    * @param fieldName the name of the field to set.
-   * @param value the value to set.
+   * @param value     the value to set.
    * @return a reference to the RecordBuilder.
    */
   def set(fieldName: String, value: AnyRef): RecordBuilder = set(schema.getField(fieldName), value)
 
   /**
    * Sets the value of a field.
+   *
    * @param field the field to set.
    * @param value the value to set.
    * @return a reference to the RecordBuilder.
@@ -100,7 +111,8 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Sets the value of a field.
-   * @param pos the field to set.
+   *
+   * @param pos   the field to set.
    * @param value the value to set.
    * @return a reference to the RecordBuilder.
    */
@@ -108,8 +120,9 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Sets the value of a field.
+   *
    * @param field the field to set.
-   * @param pos the position of the field.
+   * @param pos   the position of the field.
    * @param value the value to set.
    * @return a reference to the RecordBuilder.
    */
@@ -122,6 +135,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Checks whether a field has been set.
+   *
    * @param fieldName the name of the field to check.
    * @return true if the given field is non-null; false otherwise.
    */
@@ -129,6 +143,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Checks whether a field has been set.
+   *
    * @param field the field to check.
    * @return true if the given field is non-null; false otherwise.
    */
@@ -136,6 +151,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Checks whether a field has been set.
+   *
    * @param pos the position of the field to check.
    * @return true if the given field is non-null; false otherwise.
    */
@@ -143,6 +159,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Clears the value of the given field.
+   *
    * @param fieldName the name of the field to clear.
    * @return a reference to the RecordBuilder.
    */
@@ -150,6 +167,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Clears the value of the given field.
+   *
    * @param field the field to clear.
    * @return a reference to the RecordBuilder.
    */
@@ -157,6 +175,7 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Clears the value of the given field.
+   *
    * @param pos the position of the field to clear.
    * @return a reference to the RecordBuilder.
    */
@@ -196,9 +215,10 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
    * If the field has been set, the set value is returned (even if it's null).
    * If the field hasn't been set and has a default value, the default value
    * is returned.
+   *
    * @param field the field whose value should be retrieved.
    * @return the value set for the given field, the field's default value,
-   * or null.
+   *         or null.
    * @throws IOException
    */
   @throws(classOf[IOException])
@@ -211,9 +231,10 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
 
   /**
    * Gets the default value of the given field, if any.
+   *
    * @param field the field whose default value should be retrieved.
    * @return the default value associated with the given field,
-   * or null if none is specified in the schema.
+   *         or null if none is specified in the schema.
    * @throws IOException
    */
   @throws(classOf[IOException])
@@ -222,11 +243,13 @@ class RecordBuilder private (private[RecordBuilder] val record: GenericData.Reco
   }
 
   private val defaultValueCache = java.util.Collections.synchronizedMap(new java.util.WeakHashMap[Field, AnyRef]())
+
   /**
    * Gets the default value of the given field, if any was specified, otherwise use DefaultJsonNode's value.
+   *
    * @param field the field whose default value should be retrieved.
    * @return the default value associated with the given field,
-   * or null if none is specified in the schema.
+   *         or null if none is specified in the schema.
    */
   private def getDefaultValue(field: Field): AnyRef = {
     var json = field.defaultValue

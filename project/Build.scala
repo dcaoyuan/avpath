@@ -1,7 +1,7 @@
 import sbt._
 import sbt.Keys._
 import sbtfilter.Plugin.FilterKeys._
-import scoverage.ScoverageSbtPlugin._
+//import scoverage.ScoverageSbtPlugin._
 
 object Build extends sbt.Build {
 
@@ -14,7 +14,7 @@ object Build extends sbt.Build {
     .settings(libraryDependencies ++= Dependencies.avro ++ Dependencies.test)
     .settings(Packaging.settings: _*)
     .settings(sbtavro.SbtAvro.avroSettings ++ avroSettingsTest: _*)
-    .settings(instrumentSettings: _*)
+    //.settings(instrumentSettings: _*)
     .settings(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*)
 
   lazy val basicSettings = Seq(
@@ -24,7 +24,7 @@ object Build extends sbt.Build {
     resolvers ++= Seq(
       "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
       "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-      "Typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"),
+      "Typesafe repo" at "https://repo.typesafe.com/typesafe/releases/"),
     javacOptions ++= Seq("-source", "1.6", "-target", "1.6"))
 
   lazy val avroSettings = Seq(
