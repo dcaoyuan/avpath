@@ -5,6 +5,10 @@ import sbtfilter.Plugin.FilterKeys._
 
 object Build extends sbt.Build {
 
+  lazy val scala212 = "2.12.11"
+  lazy val scala211 = "2.11.12"
+  lazy val supportedScalaVersions = List(scala212, scala211)
+
   lazy val avpath = Project("wandou-avpath", file("."))
     .settings(basicSettings: _*)
     .settings(Formatting.settings: _*)
@@ -16,6 +20,7 @@ object Build extends sbt.Build {
     .settings(sbtavro.SbtAvro.avroSettings ++ avroSettingsTest: _*)
     //.settings(instrumentSettings: _*)
     .settings(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*)
+    .settings(crossScalaVersions := supportedScalaVersions)
 
   lazy val basicSettings = Seq(
     organization := "com.wandoulabs.avro",
