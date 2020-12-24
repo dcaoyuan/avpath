@@ -11,13 +11,14 @@ lazy val avpath = Project("wandou-avpath", file("."))
   .settings(libraryDependencies ++= Dependencies.avro ++ Dependencies.test)
   .settings(dependencyOverrides += Dependencies.commonsCollections)
   .settings(dependencyOverrides ++= Dependencies.jackson)
+  .settings(dependencyOverrides += Dependencies.apacheCompress)
   .settings(Packaging.settings: _*)
   .settings(sbtavro.SbtAvro.avroSettings ++ avroSettingsTest: _*)
   .settings(CrossVersions.crossVersionSetting)
 
 lazy val basicSettings = Seq(
   organization := "com.wandoulabs.avro",
-  version := "0.1.7-talend-SNAPSHOT",
+  version := "0.1.7-talend",
   scalacOptions ++= Seq("-unchecked", "-deprecation"),
   resolvers ++= Seq(
     "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
