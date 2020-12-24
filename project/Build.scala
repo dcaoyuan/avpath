@@ -24,6 +24,9 @@ object Dependencies {
     "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.15-TALEND"
   )
 
+  val apacheCompress = "org.apache.commons" % "commons-compress" % "1.19"
+
+
   val basic: Seq[ModuleID] = log ++ test ++ avro
 
   val all = basic
