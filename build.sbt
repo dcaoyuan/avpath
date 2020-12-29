@@ -18,7 +18,7 @@ lazy val avpath = Project("wandou-avpath", file("."))
 
 lazy val basicSettings = Seq(
   organization := "com.wandoulabs.avro",
-  version := "0.1.7-talend",
+  version := "0.1.8-talend-SNAPSHOT",
   scalacOptions ++= Seq("-unchecked", "-deprecation"),
   resolvers ++= Seq(
     "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
