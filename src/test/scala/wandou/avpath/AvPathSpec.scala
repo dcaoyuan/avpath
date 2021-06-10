@@ -499,6 +499,40 @@ class AvPathSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
       }
     }
 
+    "select/update record field with regex" should {
+      val record = initAccount()
+      val path = ".(~\".*registerTime\")"
+      val ast = new Parser().parse(path)
+
+      val res0 = Evaluator.select(record, ast)
+
+      s"select |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res0.map(_.value).mkString("\n"))
+
+        assertResult(List(0))(res0.map(_.value.asInstanceOf[Long]).sorted)
+      }
+
+      Evaluator.update(record, ast, 1)
+      val res1 = Evaluator.select(record, ast)
+      s"update |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res1.map(_.value).mkString("\n"))
+
+        assertResult(List(1))(res1.map(_.value))
+      }
+
+      Evaluator.updateJson(record, ast, "1")
+      val res2 = Evaluator.select(record, ast)
+      s"updateJson |${path}|" in {
+        info("AST:\n" + ast)
+        info("Got:\n" + res2.map(_.value).mkString("\n"))
+
+        assertResult(List(1))(res2.map(_.value))
+      }
+
+    }
+
     "select map field with prediction" should {
       val record = initAccount()
       val path = ".devApps{.numBlackApps > 2}.numBlackApps"
