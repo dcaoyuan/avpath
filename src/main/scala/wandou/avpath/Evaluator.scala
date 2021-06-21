@@ -1,35 +1,20 @@
 package wandou.avpath
 
-import wandou.avro.FromJson
-import wandou.avpath.Parser.ComparionExprSyntax
-import wandou.avpath.Parser.ConcatExprSyntax
-import wandou.avpath.Parser.LiteralSyntax
-import wandou.avpath.Parser.LogicalExprSyntax
-import wandou.avpath.Parser.MapKeysSyntax
-import wandou.avpath.Parser.MathExprSyntax
-import wandou.avpath.Parser.ObjPredSyntax
-import wandou.avpath.Parser.PathSyntax
-import wandou.avpath.Parser.PosPredSyntax
-import wandou.avpath.Parser.SelectorSyntax
-import wandou.avpath.Parser.SubstSyntax
-import wandou.avpath.Parser.Syntax
-import wandou.avpath.Parser.UnaryExprSyntax
-import wandou.avpath.Parser.PosSyntax
-import java.nio.ByteBuffer
-
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
-import org.apache.avro.generic.GenericEnumSymbol
-import org.apache.avro.generic.GenericFixed
-import org.apache.avro.generic.IndexedRecord
+import org.apache.avro.generic.{ GenericData, GenericEnumSymbol, GenericFixed, IndexedRecord }
+import wandou.avpath.Parser._
+import wandou.avro.FromJson
 
+import java.nio.ByteBuffer
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object Evaluator {
 
   sealed trait Target
 
-  final case class TargetRecord(record: IndexedRecord, field: Schema.Field) extends Target
+  final case class TargetRecord(record: IndexedRecord, field: Schema.Field, targetArray: TargetArray) extends Target
 
   final case class TargetArray(array: java.util.Collection[_], idx: Int, arraySchema: Schema) extends Target
 
@@ -126,7 +111,7 @@ object Evaluator {
 
       case Op.Clear =>
         targets(ctxs) foreach {
-          case TargetRecord(rec, field) =>
+          case TargetRecord(rec, field, _) =>
             rec.get(field.pos) match {
               case arr: java.util.Collection[_] => arr.clear
               case map: java.util.Map[_, _]     => map.clear
@@ -142,14 +127,14 @@ object Evaluator {
 
       case Op.Update =>
         targets(ctxs) foreach {
-          case TargetRecord(rec, null) =>
+          case TargetRecord(rec, null, _) =>
             val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], rec.getSchema, false) else value
             value1 match {
               case v: IndexedRecord => replace(rec, v)
               case _                => // log.error
             }
 
-          case TargetRecord(rec, field) =>
+          case TargetRecord(rec, field, _) =>
             val value1 = if (isJsonValue) FromJson.fromJsonString(value.asInstanceOf[String], field.schema, false) else value
             rec.put(field.pos, value1)
 
@@ -182,7 +167,7 @@ object Evaluator {
 
       case Op.Insert =>
         targets(ctxs) foreach {
-          case TargetRecord(rec, field) =>
+          case TargetRecord(rec, field, _) =>
             rec.get(field.pos) match {
               case arr: java.util.Collection[_] =>
                 getElementType(field.schema) foreach { elemSchema =>
@@ -230,7 +215,7 @@ object Evaluator {
 
       case Op.InsertAll =>
         targets(ctxs) foreach {
-          case TargetRecord(rec, field) =>
+          case TargetRecord(rec, field, _) =>
             rec.get(field.pos) match {
               case arr: java.util.Collection[_] =>
                 getElementType(field.schema) foreach { elemSchema =>
@@ -400,17 +385,20 @@ object Evaluator {
         // select record itself
         ctxs foreach {
           case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, _) =>
-            res ::= Ctx(rec, name, schema, null, path, Some(TargetRecord(rec, null)))
+            res ::= Ctx(rec, name, schema, null, path, Some(TargetRecord(rec, null, null)))
           case _ => // should be rec
         }
       case "*" =>
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, _) =>
+          case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, target) =>
             val fields = rec.getSchema.getFields.iterator
+            val anyTargetArray = target.collect {
+              case t: TargetArray => t
+            }
             while (fields.hasNext) {
               val field = fields.next
               val value = rec.get(field.pos)
-              res ::= Ctx(value, field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
+              res ::= Ctx(value, field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field, anyTargetArray.orNull)))
             }
           case Ctx(arr: java.util.Collection[_], name, schema, topLevelField, path, _) =>
             getElementType(schema) foreach { elemType =>
@@ -435,12 +423,15 @@ object Evaluator {
 
       case fieldName =>
         ctxs foreach {
-          case Ctx(rec: IndexedRecord, name, schema, topLevelField, path, _) =>
+          case Ctx(rec: IndexedRecord, _, _, topLevelField, path, target) =>
             val field = rec.getSchema.getField(fieldName)
-            if (field != null) {
-              res ::= Ctx(rec.get(field.pos), field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field)))
+            val anyTargetArray = target.collect {
+              case t: TargetArray => t
             }
-          case Ctx(_, name, schema, topLevelField, path, _) if unwrapIfNullable(schema).getType eq Type.RECORD =>
+            if (field != null) {
+              res ::= Ctx(rec.get(field.pos), field.name, field.schema, if (topLevelField == null) field else topLevelField, path, Some(TargetRecord(rec, field, anyTargetArray.orNull)))
+            }
+          case Ctx(_, _, schema, topLevelField, path, _) if unwrapIfNullable(schema).getType eq Type.RECORD =>
             res ::= Ctx(null, fieldName, unwrapIfNullable(schema).getField(fieldName).schema(), topLevelField, path, None)
           case _ => // should be rec
         }
@@ -674,27 +665,40 @@ object Evaluator {
 
   private def evaluateMapValues(syntax: MapKeysSyntax, ctxs: List[Ctx]): List[Ctx] = {
     val expectKeys = syntax.keys
-    var res = List[Ctx]()
-    ctxs foreach {
-      case Ctx(map: java.util.Map[String, _] @unchecked, name, schema, topLevelField, path, _) =>
-        getValueType(schema) foreach { valueSchema =>
-          // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
-          val entries = map.entrySet.iterator
-          while (entries.hasNext) {
-            val entry = entries.next
-            val key = entry.getKey
-            expectKeys.collectFirst {
-              case Left(expectKey) if expectKey == key        => entry.getValue
-              case Right(regex) if regex.matcher(key).matches => entry.getValue
-            } foreach { value =>
-              res = Ctx(value, name, valueSchema, topLevelField, path, Some(TargetMap(map, key, schema))) :: res
+    ctxs.foldLeft(List[Ctx]()) { (finalResult, ctx) =>
+      val result = ctx match {
+        case Ctx(map: java.util.Map[String, _] @unchecked, name, schema, topLevelField, path, _) =>
+          var res = List[Ctx]()
+          getValueType(schema) foreach { valueSchema =>
+            // the order of selected map items is not guaranteed due to the implemetation of java.util.Map
+            val entries = map.entrySet.iterator
+            while (entries.hasNext) {
+              val entry = entries.next
+              val key = entry.getKey
+              expectKeys.collectFirst {
+                case Left(expectKey) if expectKey == key        => entry.getValue
+                case Right(regex) if regex.matcher(key).matches => entry.getValue
+              } foreach { value =>
+                res = Ctx(value, name, valueSchema, topLevelField, path, Some(TargetMap(map, key, schema))) :: res
+              }
             }
           }
-        }
-      case _ => // should be map
+          res.reverse
+        case Ctx(record: GenericData.Record @unchecked, name, _, topLevelField, path, _) =>
+          record.getSchema.getFields.asScala.foldLeft(List[Ctx]()) { (res, field) =>
+            res ++ expectKeys.collectFirst {
+              case Left(expectKey) if expectKey == field.name()        => record.get(field.pos())
+              case Right(regex) if regex.matcher(field.name()).matches => record.get(field.pos())
+            }.foldLeft(List[Ctx]()) { (res2, value) =>
+              Ctx(value, name, field.schema(), topLevelField, path, Some(TargetRecord(record, field, null))) :: res2
+            }
+
+          }
+        case _ => finalResult
+      }
+      finalResult ++ result
     }
 
-    res.reverse
   }
 
   private def evaluateExpr(expr: Syntax, ctx: Ctx): Any = {
