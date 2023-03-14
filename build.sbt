@@ -18,7 +18,7 @@ lazy val avpath = Project("wandou-avpath", file("."))
 
 lazy val basicSettings = Seq(
   organization := "com.wandoulabs.avro",
-  version := "0.1.9-talend-SNAPSHOT",
+  version := "0.1.10-talend-SNAPSHOT",
   scalacOptions ++= Seq("-unchecked", "-deprecation"),
   resolvers ++= Seq(
     "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases",
@@ -26,18 +26,20 @@ lazy val basicSettings = Seq(
     "Typesafe repo" at "https://repo.typesafe.com/typesafe/releases/",
     "Talend Open Source Releases" at "https://artifacts-oss.talend.com/nexus/content/repositories/public/"
   ),
-  javacOptions ++= Seq("-source", "1.6", "-target", "1.6"))
+  javacOptions ++= Seq("-source", "1.6", "-target", "1.6"),
+  excludeDependencies := Seq(SbtExclusionRule("org.apache.velocity", "velocity"))
+)
 
 lazy val avroSettings = Seq(
   sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
-  sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Compile) (_ / "avsc"),
+  sourceDirectory in sbtavro.SbtAvro.avroConfig := ((resourceDirectory in Compile) (_ / "avsc")).value,
   version in sbtavro.SbtAvro.avroConfig := "1.8.2")
 
 // Todo rewrite sbt-avro to compile in Test phase.
 lazy val avroSettingsTest = Seq(
   sbtavro.SbtAvro.stringType in sbtavro.SbtAvro.avroConfig := "String",
-  sourceDirectory in sbtavro.SbtAvro.avroConfig <<= (resourceDirectory in Test) (_ / "avsc"),
-  javaSource in sbtavro.SbtAvro.avroConfig <<= (sourceManaged in Test) (_ / "java" / "compiled_avro"),
+  sourceDirectory in sbtavro.SbtAvro.avroConfig := ((resourceDirectory in Test) (_ / "avsc")).value,
+  javaSource in sbtavro.SbtAvro.avroConfig := ((sourceManaged in Test) (_ / "java" / "compiled_avro")).value,
   version in sbtavro.SbtAvro.avroConfig := "1.8.2")
 
 lazy val releaseSettings = Seq(
